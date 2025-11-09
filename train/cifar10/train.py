@@ -54,7 +54,8 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period, l
             l, acc = d2l.train_batch_ch13(net, features, labels, loss, trainer, devices)
             metric = [a + float(b) for a, b in zip(metric, [l, acc, labels.shape[0]])]
             if (i + 1) % (num_batches // 1) == 0 or i == num_batches - 1:
-                print('epoch', epoch + (i + 1) / num_batches, ', sample size', num_batches, labels.shape[0], len(train_iter.dataset), ', loss', metric[0] / metric[2], ', acc', metric[1] / metric[2])
+                print('epoch', epoch + (i + 1) / num_batches, ', sample size', num_batches, labels.shape[0], len(train_iter.dataset),
+                      ', loss', metric[0] / metric[2], ', acc', metric[1] / metric[2])
         if valid_iter is not None:
             valid_acc = d2l.evaluate_accuracy_gpu(net, valid_iter)
             print(epoch + 1, 'valid_acc', valid_acc)
