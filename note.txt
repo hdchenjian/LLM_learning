@@ -1,1 +1,6 @@
 最小化目标函数和执行极大似然估计等价
+
+CNN_book_small.pdf
+https://zh.d2l.ai
+https://github.com/datawhalechina/hugging-llm/blob/main/content/chapter1/ChatGPT%E5%9F%BA%E7%A1%80%E7%A7%91%E6%99%AE%E2%80%94%E2%80%94%E7%9F%A5%E5%85%B6%E4%B8%80%E7%82%B9%E6%89%80%E4%BB%A5%E7%84%B6.md
+
