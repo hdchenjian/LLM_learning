@@ -17,21 +17,46 @@ def test_embedding(text, api_key):
         return resp.get('output')['embeddings'][0]['embedding']
     return
 
-def test_qwen():
-    api_key = 'sk-08f9217e9e2d4c9d84a911c9976ced08'
-    client = OpenAI(
-        api_key= api_key,
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+def get_response(client, messages):
+    # 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
+    completion = client.chat.completions.create(
+        model="qwen3-max",
+        messages=messages
     )
+    print('get_response', len(completion.choices[0].message.content), completion.choices[0].message.role)
+    return (completion.choices[0].message.content, completion.choices[0].message.role)
 
+def test_chat(api_key):
+    client = OpenAI(api_key= api_key, base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",)
+    messages = []
+    messages.append({"role": "user", "content": "推荐一部关于太空探索的科幻电影。"})
+    print("第1轮")
+    print(f"用户：{messages[0]['content']}")
+    assistant_output = get_response(client, messages)[0]
+    messages.append({"role": "assistant", "content": assistant_output})
+    print(f"模型：{assistant_output}\n")
+
+    # 第 2 轮
+    messages.append({"role": "user", "content": "这部电影的导演是谁？"})
+    print("第2轮")
+    print(f"用户：{messages[-1]['content']}")
+    assistant_output = get_response(client, messages)[0]
+    messages.append({"role": "assistant", "content": assistant_output})
+    print(f"模型：{assistant_output}\n")
+
+def test_qwen(api_key):
+    client = OpenAI(api_key= api_key, base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",)
     # 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
     completion = client.chat.completions.create(
         model="qwen3-max", 
         messages=[
             {'role': 'system', 'content': 'You are a helpful assistant.'},
             #{'role': 'user', 'content': '简单介绍一下linux'}
-            {'role': 'user', 'content': '你是谁?'}
-        ]
+            #{'role': 'user', 'content': '你是谁?'}
+            {'role': 'user', 'content': """今天真开心。-->正向 心情不太好。-->负向 我们是快乐的年轻人。-->"""}
+        ],
+        temperature=1,
+        top_p=1,
     )
     print(completion.choices[0].message.content)
 
@@ -53,9 +78,8 @@ def test_openai():
 def cosine_similarity(vec1, vec2):
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
-if __name__ == '__main__':
+def test_embedding():
     api_key = 'sk-08f9217e9e2d4c9d84a911c9976ced08'
-    #test_qwen()
     embedding_1 = test_embedding('我喜欢你', api_key)
     print(type(embedding_1))
     embedding_2 = test_embedding('我钟意你', api_key)
@@ -64,3 +88,9 @@ if __name__ == '__main__':
     print(cosine_similarity(embedding_1, embedding_2))
     print(cosine_similarity(embedding_1, embedding_3))
     print(cosine_similarity(embedding_2, embedding_3))
+
+if __name__ == '__main__':
+    api_key = 'sk-08f9217e9e2d4c9d84a911c9976ced08'
+    #test_qwen(api_key)
+    test_chat(api_key)
+    
