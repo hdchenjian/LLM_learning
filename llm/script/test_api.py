@@ -23,7 +23,7 @@ def get_response(client, messages):
         model="qwen3-max",
         messages=messages
     )
-    print('get_response', len(completion.choices[0].message.content), completion.choices[0].message.role)
+    print('get_response', len(completion.choices[0].message.content), completion.choices[0].message.role, '\n')
     return (completion.choices[0].message.content, completion.choices[0].message.role)
 
 def test_chat(api_key):
@@ -47,14 +47,16 @@ def test_chat(api_key):
 def test_qwen(api_key):
     client = OpenAI(api_key= api_key, base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",)
     # 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
-    completion = client.chat.completions.create(
-        model="qwen3-max", 
-        messages=[
-            {'role': 'system', 'content': 'You are a helpful assistant.'},
-            #{'role': 'user', 'content': '简单介绍一下linux'}
-            #{'role': 'user', 'content': '你是谁?'}
-            {'role': 'user', 'content': """今天真开心。-->正向 心情不太好。-->负向 我们是快乐的年轻人。-->"""}
-        ],
+    messages=[
+        {'role': 'user', 'content': '大前提：罐子里装满了黄色的弹珠  \n \
+        小前提：鲍勃手里有一颗黄色的弹珠  \n \
+        问题：鲍勃手里的弹珠来自哪里'}]
+    assistant_output = get_response(client, messages)[0]
+    print(f"模型：{assistant_output}\n")
+    return
+
+    completion = client.chat.completions.create(model="qwen3-max", 
+        messages=[{'role': 'user', 'content': """今天真开心。-->正向 心情不太好。-->负向 我们是快乐的年轻人。-->"""}],
         temperature=1,
         top_p=1,
     )
@@ -91,6 +93,6 @@ def test_embedding():
 
 if __name__ == '__main__':
     api_key = 'sk-08f9217e9e2d4c9d84a911c9976ced08'
-    #test_qwen(api_key)
-    test_chat(api_key)
+    test_qwen(api_key)
+    #test_chat(api_key)
     
