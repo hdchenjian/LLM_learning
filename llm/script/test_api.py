@@ -51,11 +51,12 @@ def test_qwen(api_key):
         {'role': 'user', 'content': '大前提：罐子里装满了黄色的弹珠  \n \
         小前提：鲍勃手里有一颗黄色的弹珠  \n \
         问题：鲍勃手里的弹珠来自哪里'}]
+    messages=[{'role': 'user', 'content': "用一只水桶装水, 把水加到原来的2倍, 连桶重10千克, 如果把水加到原来的5倍, 连桶重22千克。桶里原有水多少千克?"}]
     assistant_output = get_response(client, messages)[0]
     print(f"模型：{assistant_output}\n")
     return
 
-    completion = client.chat.completions.create(model="qwen3-max", 
+    completion = client.chat.completions.create(model="qwen3-max",
         messages=[{'role': 'user', 'content': """今天真开心。-->正向 心情不太好。-->负向 我们是快乐的年轻人。-->"""}],
         temperature=1,
         top_p=1,
