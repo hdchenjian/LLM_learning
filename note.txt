@@ -7,4 +7,5 @@ https://github.com/datawhalechina/hugging-llm
 https://github.com/datawhalechina/leedl-tutorial
 
 https://github.com/HqWu-HITCS/Awesome-Chinese-LLM?tab=readme-ov-file#LLM教程
+https://github.com/allmachinelearning/MachineLearning
 https://www.datawhale.cn/learn/summary/40
