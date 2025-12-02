@@ -1,0 +1,6 @@
+__pycache__
+*.pdf
+*.txt
+*.jpg
+*.pth
+ultralytics
