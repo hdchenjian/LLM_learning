@@ -476,22 +476,19 @@ class Transformer(nn.Module):
         return dec_logits, enc_self_attns, dec_self_attns, dec_enc_attns
 
 
-'''
-# 定义网络
-'''
-model = Transformer()
-criterion = nn.CrossEntropyLoss(ignore_index=0)  # 忽略 占位符 索引为0.
-optimizer = optim.SGD(model.parameters(), lr=1e-3, momentum=0.99)
-
-'''
-# 训练Transformer
-'''
-for epoch in range(50):
-    for enc_inputs, dec_inputs, dec_outputs in loader:
-        enc_inputs, dec_inputs, dec_outputs = enc_inputs, dec_inputs, dec_outputs    # [2,5] [2,5] [2,5]
-        outputs, enc_self_attns, dec_self_attns, dec_enc_attns = model(enc_inputs, dec_inputs)
-        loss = criterion(outputs, dec_outputs.view(-1))  # outputs: [batch_size*tgt_len, tgt_vocab_size]
-        print('Epoch:', '%04d' % (epoch + 1), 'loss =', '{:.6f}'.format(loss))
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+if __name__ == '__main__':
+    model = Transformer()
+    criterion = nn.CrossEntropyLoss(ignore_index=0)  # 忽略 占位符 索引为0.
+    optimizer = optim.SGD(model.parameters(), lr=1e-3, momentum=0.99)
+    
+    for epoch in range(50):
+        for enc_inputs, dec_inputs, dec_outputs in loader:
+            enc_inputs, dec_inputs, dec_outputs = enc_inputs, dec_inputs, dec_outputs    # [2,5] [2,5] [2,5]
+            outputs, enc_self_attns, dec_self_attns, dec_enc_attns = model(enc_inputs, dec_inputs)
+            loss = criterion(outputs, dec_outputs.view(-1))  # outputs: [batch_size*tgt_len, tgt_vocab_size]
+            print('Epoch:', '%04d' % (epoch + 1), 'loss =', '{:.6f}'.format(loss))
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+    torch.save(model.state_dict(), 'model.pth')
+    
