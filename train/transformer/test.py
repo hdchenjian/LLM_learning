@@ -1,6 +1,8 @@
 import torch
 from train import loader, Transformer, tgt_vocab, tgt_len, src_idx2word, idx2word
 
+# https://www.datawhale.cn/learn/content/87/3087
+
 def test(model, enc_input, start_symbol):
     '''
     enc_input: [1, src_len]    只取一个例子
