@@ -5,12 +5,10 @@ from train import loader, Transformer, tgt_vocab, tgt_len, src_idx2word, idx2wor
 def test(model, enc_input, start_symbol):
     enc_outputs, enc_self_attns = model.Encoder(enc_input)    # [1,src_len, d_model] []
     dec_input = torch.zeros(1, tgt_len).type_as(enc_input.data)    # [1, tgt_len]
-
     next_symbol = start_symbol
 
     for i in range(0, tgt_len):
         dec_input[0][i] = next_symbol
-
         # 然后一个一个解码
         dec_outputs, _, _ = model.Decoder(dec_input, enc_input, enc_outputs)    # [1, tgt_len, d_model]
 
