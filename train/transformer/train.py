@@ -261,7 +261,6 @@ class Encoder(nn.Module):
         # enc_self_attn: [batch_size, n_heads, src_len, src_len]
         return enc_outputs, enc_self_attns
 
-# decoder layer(block)
 # decoder两次调用MultiHeadAttention时，第一次调用传入的 Q，K，V 的值是相同的，都等于dec_inputs，第二次调用 Q 矩阵是来自Decoder的
 # 输入。K，V 两个矩阵是来自Encoder的输出，等于enc_outputs。
 class DecoderLayer(nn.Module):
@@ -305,8 +304,6 @@ class DecoderLayer(nn.Module):
 第三步，Mask掉句子中的占位符号和输出顺序.
 第四步，通过6层的decoder（上一层的输出作为下一层的输入）
 '''
-
-
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
@@ -428,7 +425,6 @@ class Transformer(nn.Module):
         dec_logits = self.projection(dec_outputs)  # dec_logits: [batch_size, tgt_len, tgt_vocab_size]
         dec_logits = dec_logits.view(-1, dec_logits.size(-1))  # dec_logits: [batch_size*tgt_len, tgt_vocab_size]
         return dec_logits, enc_self_attns, dec_self_attns, dec_enc_attns
-
 
 if __name__ == '__main__':
     model = Transformer()
