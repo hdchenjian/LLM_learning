@@ -2,14 +2,8 @@ import torch
 from train import loader, Transformer, tgt_vocab, tgt_len, src_idx2word, idx2word
 
 # https://www.datawhale.cn/learn/content/87/3087
-
 def test(model, enc_input, start_symbol):
-    '''
-    enc_input: [1, src_len]    只取一个例子
-    '''
-    # 先得到Encoder的输出
     enc_outputs, enc_self_attns = model.Encoder(enc_input)    # [1,src_len, d_model] []
-
     dec_input = torch.zeros(1, tgt_len).type_as(enc_input.data)    # [1, tgt_len]
 
     next_symbol = start_symbol
@@ -26,16 +20,16 @@ def test(model, enc_input, start_symbol):
         next_symbol = next_word.item()
     return dec_input
 
-
 model = Transformer()
 model.load_state_dict(torch.load('model.pth', map_location='cpu'))
 enc_inputs, _, _ = next(iter(loader))
 # enc_input只取一个例子[1]
 # 预测dec_input
 # dec_input全部预测出来之后，在输入Model预测 dec_output
-predict_dec_input = test(model, enc_inputs[1].view(1, -1), start_symbol=tgt_vocab["S"])    # [1, tgt_len]
+index = 0
+predict_dec_input = test(model, enc_inputs[index].view(1, -1), start_symbol=tgt_vocab["S"])    # [1, tgt_len]
 # 然后走一遍完整的过程
-predict, _, _, _ = model(enc_inputs[1].view(1, -1), predict_dec_input)    # [tat_len, tgt_voc_size]
+predict, _, _, _ = model(enc_inputs[index].view(1, -1), predict_dec_input)    # [tat_len, tgt_voc_size]
 
 predict = predict.data.max(1, keepdim=True)[1]
-print([src_idx2word[int(i)] for i in enc_inputs[1]], '->', [idx2word[n.item()] for n in predict.squeeze()])
+print([src_idx2word[int(i)] for i in enc_inputs[index]], '->', [idx2word[n.item()] for n in predict.squeeze()])

@@ -1,5 +1,4 @@
-import math
-import torch
+import torch, math
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
@@ -35,16 +34,10 @@ def make_data(sentences):
       dec_outputs.extend(dec_output)
     return torch.LongTensor(enc_inputs), torch.LongTensor(dec_inputs), torch.LongTensor(dec_outputs)
 enc_inputs, dec_inputs, dec_outputs = make_data(sentences)    # [3,5], [3,5], [3,5] 只是恰巧长度都为5，enc_inputs、dec_inputs长度可以不一样
-print(enc_inputs)
-print(dec_inputs)
-print(dec_outputs)
+print('enc_inputs', enc_inputs)
+#print('dec_inputs', dec_inputs)
+#print('dec_outputs', dec_outputs)
 
-'''
-sentences 里一共有三个训练数据，中文->英文。把Encoder_input、Decoder_input、Decoder_output转换成字典索引，
-例如"学"->3、“student”->6。再把数据转换成batch大小为2的分组数据，3句话一共可以分成两组，一组2句话、一组1句话。src_len表示中文句子
-固定最大长度，tgt_len 表示英文句子固定最大长度。
-'''
-#自定义数据集函数
 class MyDataSet(Data.Dataset):
     def __init__(self, enc_inputs, dec_inputs, dec_outputs):
         super(MyDataSet, self).__init__()
@@ -58,6 +51,7 @@ class MyDataSet(Data.Dataset):
     def __getitem__(self, idx):
         return self.enc_inputs[idx], self.dec_inputs[idx], self.dec_outputs[idx]
 
+#batch大小为2的分组数据, 3句话一共可以分成两组，一组2句话、一组1句话
 loader = Data.DataLoader(MyDataSet(enc_inputs, dec_inputs, dec_outputs), 2, False)
 
 d_model = 512   # 字 Embedding 的维度
@@ -66,28 +60,22 @@ d_k = d_v = 64  # K(=Q), V的维度. V的维度可以和K=Q不一样
 n_layers = 6    # 有多少个encoder和decoder
 n_heads = 8     # Multi-Head Attention设置为8
 
-# 位置嵌入，position Embedding
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
+    def __init__(self, d_model, dropout=0.1, max_len=src_len):
         super(PositionalEncoding,self).__init__()
         self.dropout = nn.Dropout(p=dropout)
-        pos_table = np.array([
-        [pos / np.power(10000, 2 * i / d_model) for i in range(d_model)]
-        if pos != 0 else np.zeros(d_model) for pos in range(max_len)])
-        pos_table[1:, 0::2] = np.sin(pos_table[1:, 0::2])                  # 字嵌入维度为偶数时
-        pos_table[1:, 1::2] = np.cos(pos_table[1:, 1::2])                  # 字嵌入维度为奇数时
-        self.pos_table = torch.FloatTensor(pos_table)               # enc_inputs: [seq_len, d_model]
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * -(math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        self.pe = pe.unsqueeze(0)
 
-    def forward(self,enc_inputs):
-        """_summary_
-
-        Args:
-            enc_inputs (_type_): nn.embedding() [seq_len, batch_size, d_model]
-
-        Returns:
-            _type_: _description_
+    def forward(self, enc_inputs):
         """
-        enc_inputs += self.pos_table[:enc_inputs.size(1),:]   # 两个embedding相加，参考https://www.cnblogs.com/d0main/p/10447853.html
+            enc_inputs (_type_): nn.embedding() [batch_size, seq_len, d_model]
+        """
+        enc_inputs += self.pe #[:enc_inputs.size(1),:]   # 两个embedding相加，参考https://www.cnblogs.com/d0main/p/10447853.html
         return self.dropout(enc_inputs)
 
 '''
@@ -226,7 +214,6 @@ class FF(nn.Module):
         output = self.fc(inputs)
         return nn.LayerNorm(d_model)(output + residual)   # [batch_size, seq_len, d_model]
 
-## encoder layer(block)
 class EncoderLayer(nn.Module):
     def __init__(self):
         super(EncoderLayer, self).__init__()
@@ -258,16 +245,12 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.src_emb = nn.Embedding(src_vocab_size, d_model)
         self.pos_emb = PositionalEncoding(d_model)
-        self.layers = nn.ModuleList(
-            [EncoderLayer() for _ in range(n_layers)]
-        )
+        self.layers = nn.ModuleList([EncoderLayer() for _ in range(n_layers)])
 
     def forward(self, enc_inputs):
-        '''
-        enc_inputs: [batch_size, src_len] 元素是字典词index
-        '''
+        ''' enc_inputs: [batch_size, src_len] 元素是字典词index '''
         enc_outputs = self.src_emb(enc_inputs) # [batch_size, src_len, d_model]
-        enc_outputs = self.pos_emb(enc_outputs.transpose(0, 1)).transpose(0, 1) # [batch_size, src_len, d_model]
+        enc_outputs = self.pos_emb(enc_outputs) # [batch_size, src_len, d_model]
         enc_self_attn_mask = get_attn_pad_mask(enc_inputs, enc_inputs) # [batch_size, src_len, src_len]
         enc_self_attns = []
         for layer in self.layers:
@@ -277,23 +260,6 @@ class Encoder(nn.Module):
         # enc_outputs: [batch_size, src_len, d_model]
         # enc_self_attn: [batch_size, n_heads, src_len, src_len]
         return enc_outputs, enc_self_attns
-
-
-
-
-# 测试
-'''
-enc_inputs:
-tensor([[1, 2, 3, 4, 0],
-        [1, 5, 6, 3, 7],
-        [1, 2, 8, 4, 0]])
-'''
-#enc_outputs, enc_self_attns = Encoder()(enc_inputs)
-#print(enc_outputs.shape)    # torch.Size([3, 5, 512])
-
-
-
-
 
 # decoder layer(block)
 # decoder两次调用MultiHeadAttention时，第一次调用传入的 Q，K，V 的值是相同的，都等于dec_inputs，第二次调用 Q 矩阵是来自Decoder的
@@ -355,7 +321,7 @@ class Decoder(nn.Module):
         enc_outputs: [batch_size, src_len, d_model]
         '''
         dec_outputs = self.tgt_emb(dec_inputs)  # [batch_size, tgt_len, d_model]
-        dec_outputs = self.pos_emb(dec_outputs.transpose(0, 1)).transpose(0, 1)  # [batch_size, tgt_len, d_model]
+        dec_outputs = self.pos_emb(dec_outputs)  # [batch_size, tgt_len, d_model]
         # PAD 0填充Mask掉 (Decoder输入序列的pad mask矩阵（这个例子中decoder是没有加pad的，实际应用中都是有pad填充的）)
         # Decoder中 0填充的位置是'S'，也就是第一个位置要Mask掉，为true
         dec_self_attn_pad_mask = get_attn_pad_mask(dec_inputs, dec_inputs)  # [batch_size, tgt_len, tgt_len]  T or F
@@ -434,14 +400,6 @@ class Decoder(nn.Module):
             dec_enc_attns.append(dec_enc_attn)
         return dec_outputs, dec_self_attns, dec_enc_attns
 
-
-'''
-# Transformer
-Trasformer的整体结构，输入数据先通过Encoder，再通过Decoder，
-最后把输出进行多分类，分类数为英文字典长度，也就是判断每一个字的概率。
-'''
-
-
 class Transformer(nn.Module):
     def __init__(self):
         super(Transformer, self).__init__()
@@ -452,13 +410,9 @@ class Transformer(nn.Module):
 
     def forward(self, enc_inputs, dec_inputs):
         """
-        transformer
         Args:
             enc_inputs (_type_): [batch_size, src_len]
             dec_inputs (_type_): [batch_size, tgt_len]
-
-        Returns:
-            _type_: _description_
         """
         # encoder部分
         # enc_outputs: [batch_size, src_len, d_model],
