@@ -24,7 +24,7 @@ enc_inputs, _, _ = next(iter(loader))
 # enc_input只取一个例子[1]
 # 预测dec_input
 # dec_input全部预测出来之后，在输入Model预测 dec_output
-index = 0
+index = 1
 predict_dec_input = test(model, enc_inputs[index].view(1, -1), start_symbol=tgt_vocab["S"])    # [1, tgt_len]
 # 然后走一遍完整的过程
 predict, _, _, _ = model(enc_inputs[index].view(1, -1), predict_dec_input)    # [tat_len, tgt_voc_size]
