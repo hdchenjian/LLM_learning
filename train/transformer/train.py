@@ -322,8 +322,7 @@ class Decoder(nn.Module):
         # PAD 0填充Mask掉 (Decoder输入序列的pad mask矩阵（这个例子中decoder是没有加pad的，实际应用中都是有pad填充的）)
         # Decoder中 0填充的位置是'S'，也就是第一个位置要Mask掉，为true
         dec_self_attn_pad_mask = get_attn_pad_mask(dec_inputs, dec_inputs)  # [batch_size, tgt_len, tgt_len]  T or F
-        '''
-        此时的一个batch:['S I am a student', 'S I like learning P'], dec_self_attn_pad_mask:
+        ''' 此时的一个batch:['S I am a student', 'S I like learning P'], dec_self_attn_pad_mask:
         tensor([[[ True, False, False, False, False],
                  [ True, False, False, False, False],
                  [ True, False, False, False, False],
@@ -343,17 +342,10 @@ class Decoder(nn.Module):
                     [ True, False,  True,  True,  True],
                     [ True, False, False,  True,  True],    # 注意到之前的，当然不包括开始字符'S'。但是后面PAD的位置也会注意到前面PAD的位置
                     [ True, False, False, False,  True],
-                    [ True, False, False, False, False]],
-
-                    [ True,  True,  True,  True,  True],
-                    [ True, False,  True,  True,  True],
-                    [ True, False, False,  True,  True],
-                    [ True, False, False, False,  True],
                     [ True, False, False, False, False]]])'''
         # 这个mask主要用于encoder-decoder attention层
         # get_attn_pad_mask主要是enc_inputs的pad mask矩阵(因为enc是处理K,V的，求Attention时是用v1,v2,..vm去加权的，
-        # 要把pad对应的v_i的相关系数设为0，这样注意力就不会关注pad向量)
-        #                       dec_inputs只是提供expand的size的
+        # 要把pad对应的v_i的相关系数设为0，这样注意力就不会关注pad向量), dec_inputs只是提供expand的size的
         dec_enc_attn_mask = get_attn_pad_mask(dec_inputs, enc_inputs)  # [batc_size, tgt_len, src_len]
         '''
         此时的一个batch: 'S I am a student' 'S I like learning P'
