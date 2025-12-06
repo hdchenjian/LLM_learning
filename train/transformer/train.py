@@ -99,8 +99,8 @@ def get_attn_pad_mask(seq_q, seq_k):
             seq_q (_type_): [batch, tgt_len] [batch, 英文句子长度]
             seq_k (_type_): [batch, tgt_len] [batch, 英文句子长度]
           在Decoder_Encoder_att中，seq_q，seq_k 就是dec_input, enc_input
-            seq_q (_type_): [batch, tgt_len] [batch, 中文句子长度]
-            seq_k (_type_): [batch, enc_len] [batch, 英文句子长度]
+            seq_q (_type_): [batch, enc_len] [batch, 英文句子长度]
+            seq_k (_type_): [batch, tgt_len] [batch, 中文句子长度]
 
     Returns:
         _type_: [batch_size, len_q, len_k]  元素：T or F
@@ -323,37 +323,22 @@ class Decoder(nn.Module):
         # Decoder中 0填充的位置是'S'，也就是第一个位置要Mask掉，为true
         dec_self_attn_pad_mask = get_attn_pad_mask(dec_inputs, dec_inputs)  # [batch_size, tgt_len, tgt_len]  T or F
         '''
-        此时的一个batch:['S I am a student', 'S I like learning P']
-        dec_self_attn_pad_mask： 
+        此时的一个batch:['S I am a student', 'S I like learning P'], dec_self_attn_pad_mask:
         tensor([[[ True, False, False, False, False],
-                 [ True, False, False, False, False],
-                 [ True, False, False, False, False],
-                 [ True, False, False, False, False],
-                 [ True, False, False, False, False]],
-
-                [[ True, False, False, False, False],
                  [ True, False, False, False, False],
                  [ True, False, False, False, False],
                  [ True, False, False, False, False],
                  [ True, False, False, False, False]]])'''
         # Masked Self_Attention：当前时刻是看不到未来的信息的
         dec_self_attn_subsequence_mask = get_attn_subsequence_mask(dec_inputs)  # [batch_size, tgt_len, tgt_len] 下三角包括对角线为0，上三角为1
-        '''
-        tensor([[[0, 1, 1, 1, 1],
+        ''' tensor([[[0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1],
                  [0, 0, 0, 1, 1],
                  [0, 0, 0, 0, 1],
-                 [0, 0, 0, 0, 0]],
-
-                 [0, 1, 1, 1, 1],
-                 [0, 0, 1, 1, 1],
-                 [0, 0, 0, 1, 1],
-                 [0, 0, 0, 0, 1],
-                 [0, 0, 0, 0, 0]]], dtype=torch.uint8)'''
+                 [0, 0, 0, 0, 0]]]], dtype=torch.uint8)'''
         # Decoder中把两种mask矩阵相加（既屏蔽了pad的信息，也屏蔽了未来时刻的信息）
         # torch.gt() 比较Tensor1和Tensor2的每一个元素,并返回一个0-1值.若Tensor1中的元素大于Tensor2中的元素,则结果取1,否则取0
-        dec_self_attn_mask = torch.gt((dec_self_attn_pad_mask + dec_self_attn_subsequence_mask),
-                                      0)  # [batch_size, tgt_len, tgt_len]
+        dec_self_attn_mask = torch.gt((dec_self_attn_pad_mask + dec_self_attn_subsequence_mask), 0)  # [batch_size, tgt_len, tgt_len]
         '''tensor([[[ True,  True,  True,  True,  True],
                     [ True, False,  True,  True,  True],
                     [ True, False, False,  True,  True],    # 注意到之前的，当然不包括开始字符'S'。但是后面PAD的位置也会注意到前面PAD的位置
@@ -391,8 +376,7 @@ class Decoder(nn.Module):
             # dec_outputs: [batch_size, tgt_len, d_model], 
             # dec_self_attn: [batch_size, n_heads, tgt_len, tgt_len], 
             # dec_enc_attn: [batch_size, h_heads, tgt_len, src_len]
-            dec_outputs, dec_self_attn, dec_enc_attn = layer(dec_outputs, enc_outputs, dec_self_attn_mask,
-                                                             dec_enc_attn_mask)
+            dec_outputs, dec_self_attn, dec_enc_attn = layer(dec_outputs, enc_outputs, dec_self_attn_mask, dec_enc_attn_mask)
             dec_self_attns.append(dec_self_attn)
             dec_enc_attns.append(dec_enc_attn)
         return dec_outputs, dec_self_attns, dec_enc_attns
