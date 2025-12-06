@@ -284,14 +284,12 @@ class DecoderLayer(nn.Module):
         """
         # dec_outputs: [batch_size, tgt_len, d_model]
         # dec_self_attn: [batch_size, n_heads, tgt_len, tgt_len]
-        dec_outputs, dec_self_attn = self.dec_self_attn(dec_inputs, dec_inputs, dec_inputs,
-                                                        dec_self_attn_mask)
+        dec_outputs, dec_self_attn = self.dec_self_attn(dec_inputs, dec_inputs, dec_inputs, dec_self_attn_mask)
         
         # decoder自注意力之后的值作为Q值。K,V来自Encoder的输出
         # dec_outputs: [batch_size, tgt_len, d_model]
         # dec_enc_attn: [batch_size, h_heads, tgt_len, src_len]
-        dec_outputs, dec_enc_attn = self.dec_enc_attn(dec_outputs, enc_outputs, enc_outputs,
-                                                      dec_enc_attn_mask)
+        dec_outputs, dec_enc_attn = self.dec_enc_attn(dec_outputs, enc_outputs, enc_outputs, dec_enc_attn_mask)
         
         dec_outputs = self.pos_ffn(dec_outputs)  # dec_outputs: [batch_size, tgt_len, d_model]
         return dec_outputs, dec_self_attn, dec_enc_attn
@@ -393,7 +391,7 @@ class Transformer(nn.Module):
         enc_outputs, enc_self_attns = self.Encoder(enc_inputs)
 
         # decoder部分
-        # dec_outpus    : [batch_size, tgt_len, d_model],
+        # dec_outputs    : [batch_size, tgt_len, d_model],
         # dec_self_attns: [n_layers, batch_size, n_heads, tgt_len, tgt_len],
         # dec_enc_attn  : [n_layers, batch_size, tgt_len, src_len]
         dec_outputs, dec_self_attns, dec_enc_attns = self.Decoder(dec_inputs, enc_inputs, enc_outputs)
