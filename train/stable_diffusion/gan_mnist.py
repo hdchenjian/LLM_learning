@@ -54,7 +54,9 @@ d_optim = torch.optim.Adam(dis.parameters(), lr=0.0001)
 g_optim = torch.optim.Adam(gen.parameters(), lr=0.0001)
 loss_fn = torch.nn.BCELoss()
 
-def gen_img_plot(model, epoch, test_input):
+def gen_img_plot(model, epoch):
+    test_input = torch.randn(16, 100, device=device)
+    #print('test_input', test_input.shape)
     prediction = np.squeeze(model(test_input).detach().cpu().numpy())
     fig = plt.figure(figsize=(4, 4))
     for i in range(16):
@@ -64,9 +66,6 @@ def gen_img_plot(model, epoch, test_input):
     #plt.show()
     plt.savefig('data/{:0>2d}.jpg'.format(epoch))
     
-test_input = torch.randn(16, 100, device=device)
-print('test_input', test_input.shape)
-
 D_loss = []
 G_loss = []
 for epoch in range(20):
@@ -109,4 +108,4 @@ for epoch in range(20):
         D_loss.append(d_epoch_loss.item())
         G_loss.append(g_epoch_loss.item())
         print('Epoch:', epoch, g_epoch_loss, d_epoch_loss)
-        gen_img_plot(gen, epoch, test_input)
+        gen_img_plot(gen, epoch)
