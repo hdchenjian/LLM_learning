@@ -181,12 +181,12 @@ class FeedForward(nn.Module):
 
 
 class MoE(nn.Module):
-    def __init__(self, dim: int, hidden_dim: int, multiple_of: int, ffn_dim_multiplier: Optional[float], num_experts: int = 8, top_k: int = 2):
+    def __init__(self, dim: int, hidden_dim: int, multiple_of: int, num_experts: int, top_k: int, dropout: float):
         super().__init__()
         self.num_experts = num_experts
         self.top_k = top_k
         self.gate = nn.Linear(dim, num_experts, bias=False)
-        self.experts = nn.ModuleList([FeedForward(dim, hidden_dim, multiple_of, ffn_dim_multiplier) for _ in range(num_experts)])
+        self.experts = nn.ModuleList([FeedForward(dim, hidden_dim, multiple_of, dropout) for _ in range(num_experts)])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: (batch_size, seq_len, dim)
@@ -225,7 +225,7 @@ class TransformerBlock(nn.Module):
         if not os.getenv("MOE_BLOCK", None):
             self.feed_forward = FeedForward(dim=args.dim, hidden_dim=args.hidden_dim, multiple_of=args.multiple_of, dropout=args.dropout)
         else:
-            self.feed_forward = MoE(dim=args.dim, hidden_dim=args.hidden_dim, multiple_of=args.multiple_of, num_experts=8, top_k=2)
+            self.feed_forward = MoE(dim=args.dim, hidden_dim=args.hidden_dim, multiple_of=args.multiple_of, num_experts=8, top_k=2, dropout=args.dropout)
         self.layer_id = layer_id
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)

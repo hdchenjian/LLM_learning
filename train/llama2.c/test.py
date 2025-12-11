@@ -14,6 +14,9 @@ def test_python():
     checkpoint = os.path.join(test_ckpt_dir, "stories15M.pt")
     checkpoint_dict = torch.load(checkpoint, map_location=device)
     gptconf = ModelArgs(**checkpoint_dict['model_args'])
+    moe = 1
+    if moe:
+        os.environ["MOE_BLOCK"] = '1'
     model = Transformer(gptconf)
     print('gptconf', gptconf)
     state_dict = checkpoint_dict['model']
