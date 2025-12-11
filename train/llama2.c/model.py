@@ -1,4 +1,4 @@
-import math
+import math, os
 import struct
 import inspect
 from dataclasses import dataclass
@@ -185,31 +185,22 @@ class MoE(nn.Module):
         super().__init__()
         self.num_experts = num_experts
         self.top_k = top_k
-        # 门控网络：决定每个 Token 去往哪个专家
         self.gate = nn.Linear(dim, num_experts, bias=False)
-        # 专家列表：创建 num_experts 个独立的 FeedForward 网络
-        self.experts = nn.ModuleList([
-            FeedForward(dim, hidden_dim, multiple_of, ffn_dim_multiplier)
-            for _ in range(num_experts)
-        ])
+        self.experts = nn.ModuleList([FeedForward(dim, hidden_dim, multiple_of, ffn_dim_multiplier) for _ in range(num_experts)])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: (batch_size, seq_len, dim)
         B, T, D = x.shape
         x_flat = x.view(-1, D)
 
-        # 1. 门控网络
         gate_logits = self.gate(x_flat) # (B*T, num_experts)
-        # 2. Top-k 路由
         weights, indices = torch.topk(gate_logits, self.top_k, dim=-1)
         weights = F.softmax(weights, dim=-1) # 归一化权重
-
         output = torch.zeros_like(x_flat)
 
         for i, expert in enumerate(self.experts):
             # 3. 找出所有选中当前专家 i 的 token 索引
             batch_idx, k_idx = torch.where(indices == i)
-
             if len(batch_idx) == 0:
                 continue
 
@@ -222,9 +213,7 @@ class MoE(nn.Module):
 
             # 6. 将结果加权累加回输出张量
             output.index_add_(0, batch_idx, expert_out * expert_weights)
-
         return output.view(B, T, D)
-
 
 class TransformerBlock(nn.Module):
     def __init__(self, layer_id: int, args: ModelArgs):
@@ -233,12 +222,10 @@ class TransformerBlock(nn.Module):
         self.dim = args.dim
         self.head_dim = args.dim // args.n_heads
         self.attention = Attention(args)
-        self.feed_forward = FeedForward(
-            dim=args.dim,
-            hidden_dim=args.hidden_dim,
-            multiple_of=args.multiple_of,
-            dropout=args.dropout,
-        )
+        if not os.getenv("MOE_BLOCK", None):
+            self.feed_forward = FeedForward(dim=args.dim, hidden_dim=args.hidden_dim, multiple_of=args.multiple_of, dropout=args.dropout)
+        else:
+            self.feed_forward = MoE(dim=args.dim, hidden_dim=args.hidden_dim, multiple_of=args.multiple_of, num_experts=8, top_k=2)
         self.layer_id = layer_id
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
