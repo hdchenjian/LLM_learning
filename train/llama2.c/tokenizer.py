@@ -71,4 +71,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     t = Tokenizer(args.tokenizer_model)
-    t.export()
+    text = "I've been lucky to spend a lot of time with him"
+    tokens = t.encode(text, bos=True, eos=False)  # encode the text, use BOS
+    print('tokens', text.split(' '), len(text.split(' ')), len(tokens), tokens)
+    for i in range(len(tokens)):
+        print(i, t.decode(tokens[i]))
+    #print(type(t.decode([0])), t.decode([0]).encode('utf-8'), bytes(t.decode([0]), 'utf-8'))
+    #t.export()
