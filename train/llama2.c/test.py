@@ -12,11 +12,12 @@ def test_python():
 
     device = "cpu"
     checkpoint = os.path.join(test_ckpt_dir, "stories15M.pt")
-    checkpoint_dict = torch.load(checkpoint, map_location=device)
-    gptconf = ModelArgs(**checkpoint_dict['model_args'])
     moe = 1
     if moe:
         os.environ["MOE_BLOCK"] = '1'
+        checkpoint = os.path.join(test_ckpt_dir, "out/ckpt.pt")
+    checkpoint_dict = torch.load(checkpoint, map_location=device)
+    gptconf = ModelArgs(**checkpoint_dict['model_args'])
     model = Transformer(gptconf)
     print('gptconf', gptconf)
     state_dict = checkpoint_dict['model']
