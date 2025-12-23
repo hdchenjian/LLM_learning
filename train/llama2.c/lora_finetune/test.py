@@ -4,7 +4,8 @@ import torch, time
 
 model_path = '/home/user/.bin/learn/train/data/llm/qwen3-0.6b'
 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
-
+#print(tokenizer.encode('<s><|im_start|>'))
+#exit()
 #model = AutoPeftModelForCausalLM.from_pretrained("out")
 model = AutoPeftModelForCausalLM.from_pretrained("Qwen3_lora/checkpoint-57/")
 model = model.to("cuda")
@@ -22,6 +23,8 @@ inputs = tokenizer.apply_chat_template(messages,
                                        return_dict=True,
                                        enable_thinking=False).to('cuda')
 
+#print('inputs', inputs)
+#print(tokenizer.decode(inputs['input_ids'][0]))
 gen_kwargs = {"max_length": 2500, "do_sample": True, "top_k": 1}
 with torch.no_grad():
     for i in range(1):
