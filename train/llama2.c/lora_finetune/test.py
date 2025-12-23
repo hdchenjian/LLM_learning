@@ -1,6 +1,6 @@
 from peft import AutoPeftModelForCausalLM
 from transformers import AutoTokenizer
-import torch
+import torch, time
 
 model_path = '/home/user/.bin/learn/train/data/llm/qwen3-0.6b'
 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
@@ -25,6 +25,8 @@ inputs = tokenizer.apply_chat_template(messages,
 gen_kwargs = {"max_length": 2500, "do_sample": True, "top_k": 1}
 with torch.no_grad():
     for i in range(1):
+        start = time.time()
         outputs = model.generate(**inputs, **gen_kwargs)
+        print(i, 'spend', time.time() - start)
     outputs = outputs[:, inputs['input_ids'].shape[1]:]
     print(tokenizer.decode(outputs[0], skip_special_tokens=True))
