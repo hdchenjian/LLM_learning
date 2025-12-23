@@ -14,7 +14,7 @@ def process_func(example):
     input_ids, attention_mask, labels = [], [], [] # 初始化返回值
     # 适配chat_template
     instruction = tokenizer(
-        f"<s><|im_start|>system\n{example['system']}<|im_end|>\n"
+        f"<|im_start|>system\n{example['system']}<|im_end|>\n"
         f"<|im_start|>user\n{example['instruction'] + example['input']}<|im_end|>\n"
         f"<|im_start|>assistant\n<think>\n\n</think>\n\n",
         add_special_tokens=False
@@ -50,7 +50,9 @@ print('tokenized_id', type(tokenized_id), len(tokenized_id))
 #print(tokenizer.decode(tokenized_id[0]['input_ids']), '\n')
 #print(tokenized_id[0]["labels"], '\ndecode:', list(filter(lambda x: x != -100, tokenized_id[0]["labels"])))
 #print(tokenizer.decode(list(filter(lambda x: x != -100, tokenized_id[0]["labels"]))))
-
+#print('tokenized_id[0]["labels"]', tokenized_id[0])
+#print(tokenizer.decode(tokenized_id[0]["input_ids"]))
+#exit()
 model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", dtype=torch.bfloat16)
 model.enable_input_require_grads() # 开启梯度检查点时的必要设置[配合gradient_checkpointing参数]，通过在前向传播时释放中间激活值，并在反向传播时重新计算这些值来节省显存
 n_params = sum({p.data_ptr(): p.numel() for p in model.parameters()}.values())
