@@ -51,12 +51,12 @@ elif video == -1:
         return_tensors="pt"
     )
     print('image_grid_thw', inputs['image_grid_thw'].numpy())
-print('inputs', processor.apply_chat_template, processor.batch_decode(inputs['input_ids']))
-#print('attention_mask', np.sum(inputs['attention_mask'].numpy()))
 if 0:
     pickle.dump(inputs, open('inputs', 'wb'))
 else:
     inputs = pickle.load(open('inputs', 'rb'))
+print('inputs', processor.apply_chat_template, processor.batch_decode(inputs['input_ids']))
+#print('attention_mask', np.sum(inputs['attention_mask'].numpy()))
 for k in inputs:
     print(k, inputs[k].shape)
     if '_grid_thw' in k: print(k, inputs[k].numpy())
