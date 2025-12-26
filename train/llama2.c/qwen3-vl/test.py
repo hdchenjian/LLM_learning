@@ -11,7 +11,7 @@ torch.set_grad_enabled(False)
 model_path = "/home/user/.bin/learn/train/data/llm/qwen3-vl-2b"
 processor = AutoProcessor.from_pretrained(model_path)
 
-video = 1
+video = 0
 if video:
     messages = [{
         "role": "user",
@@ -28,7 +28,7 @@ if video:
         fps=0.02
     )
     print('video_grid_thw', inputs['video_grid_thw'].numpy())
-else:
+elif video == -1:
     messages = [{
             "role": "user",
             "content": [{"type": "image", "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",},
