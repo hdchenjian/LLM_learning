@@ -1,0 +1,1 @@
+{'image': [image1, image2], 'prompt': '将图1中女生的衣服替换为图2中女生的衣服', 'generator': <torch._C.Generator object at 0x7f3454f93c90>, 'true_cfg_scale': 4.0, 'negative_prompt': ' ', 'num_inference_steps': 1, 'guidance_scale': 1.0, 'num_images_per_prompt': 1}

@@ -8,3 +8,7 @@ ultralytics
 data
 *.pt
 *img
+*.png
+*.sh
+out
+inputs
