@@ -7,7 +7,6 @@ from torch import nn
 import d2l
 
 def evaluate_loss(net, data_iter, loss):  #@save
-    """评估给定数据集上模型的损失"""
     metric = d2l.Accumulator(2)  # 损失的总和,样本数量
     for X, y in data_iter:
         out = net(X)
