@@ -33,6 +33,8 @@ def train(train_features, test_features, train_labels, test_labels, true_w, num_
     #true_w = true_w[0:4]
     print('weight:', net[0].weight.data.numpy(), true_w, np.sum(np.abs(net[0].weight.data.numpy() - true_w)))
     d2l.plt.savefig('foo.jpg')
+    net[0].weight.data = torch.tensor(true_w, dtype= torch.float32).unsqueeze(0)
+    print('ground true loss', evaluate_loss(net, train_iter, loss), evaluate_loss(net, test_iter, loss))
 
 max_degree = 20  # 多项式的最大阶数
 n_train, n_test = 100, 100  # 训练和测试数据集大小
