@@ -11,10 +11,11 @@ tau = 4
 features = torch.zeros((T - tau, tau))
 for i in range(tau):
     features[:, i] = x[i: T - tau + i]
-    labels = x[tau:].reshape((-1, 1))
-    batch_size, n_train = 16, 600
-    # 只有前n_train个样本用于训练
-    train_iter = d2l.load_array((features[:n_train], labels[:n_train]), batch_size, is_train=True)
+#import pdb; pdb.set_trace()
+labels = x[tau:].reshape((-1, 1))
+batch_size, n_train = 16, 600
+# 只有前n_train个样本用于训练
+train_iter = d2l.load_array((features[:n_train], labels[:n_train]), batch_size, is_train=True)
 
 def init_weights(m):
     if type(m) == nn.Linear:
