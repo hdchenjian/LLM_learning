@@ -136,7 +136,10 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps, device, 
         if pred == tgt_vocab['<eos>']:
             break
         output_seq.append(pred)
-    return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
+    if os.getenv("EN_CN", None):
+        return ''.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
+    else:
+        return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
 
 def bleu(pred_seq, label_seq, k):  #@save
     """计算BLEU"""
@@ -176,18 +179,18 @@ if __name__ == '__main__':
         #src_vocab_len, tgt_vocab_len = 184, 201
         device = 'cpu'
         net.load_state_dict(torch.load('model.pth', map_location='cpu'))
-        engs = ['After he had graduated from the university, he taught English for two years .',
+        engs = ["I know .",
+                'After he had graduated from the university, he taught English for two years .',
                 "According to newspaper reports, there was an airplane accident last evening",
                 "Tom is going to a concert this evening",
                 "These products are of the same quality",
-                "Who are you ?",
-                "I know ."]
-        fras = ["從他大學畢業以後，他教了兩年的英語。",
+                "Who are you ?",]
+        fras = ["我知道。",
+                "從他大學畢業以後，他教了兩年的英語。",
                 "根據報載，有一架飛機昨天晚上發生了意外",
                 "汤姆今晚会去演唱会",
                 "这些产品质量同等",
-                "你是谁？",
-                "我知道。"]
+                "你是谁？",]
         for eng, fra in zip(engs, fras):
             translation, attention_weight_seq = predict_seq2seq(net, eng, src_vocab, tgt_vocab, num_steps, device)
             print(f'{eng} => {translation}, bleu {bleu(translation, fra, k=1):.3f}\n')
