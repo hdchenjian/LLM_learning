@@ -856,6 +856,9 @@ def read_data_nmt():
 
     Defined in :numref:`sec_machine_translation`"""
     data_dir = d2l.download_extract('fra-eng')
+    if os.getenv("EN_CN", None):
+        with open(os.path.join(data_dir, 'cmn.txt'), 'r') as f:
+            return f.read()
     with open(os.path.join(data_dir, 'fra.txt'), 'r') as f:
         return f.read()
 
@@ -883,9 +886,12 @@ def tokenize_nmt(text, num_examples=None):
         if num_examples and i > num_examples:
             break
         parts = line.split('\t')
-        if len(parts) == 2:
+        if len(parts) >= 2:
             source.append(parts[0].split(' '))
-            target.append(parts[1].split(' '))
+            if os.getenv("EN_CN", None):
+                target.append(list(parts[1].replace(' ', '')))
+            else:
+                target.append(parts[1].split(' '))
     return source, target
 
 def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
