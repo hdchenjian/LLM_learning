@@ -1,7 +1,8 @@
 import collections
 import math
-import torch
+import torch, os
 from torch import nn
+os.environ["EN_CN"] = '1'
 import d2l
 
 # https://zh.d2l.ai/_images/seq2seq-details.svg
@@ -28,24 +29,28 @@ class Seq2SeqDecoder(d2l.Decoder):
                  dropout=0, **kwargs):
         super(Seq2SeqDecoder, self).__init__(**kwargs)
         self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = nn.GRU(embed_size + num_hiddens, num_hiddens, num_layers,
-                          dropout=dropout)
+        self.rnn = nn.GRU(embed_size + num_hiddens, num_hiddens, num_layers, dropout=dropout)
         self.dense = nn.Linear(num_hiddens, vocab_size)
 
     def init_state(self, enc_outputs, *args):
-        return enc_outputs[1]
+        return (enc_outputs[1], enc_outputs[1][-1])
 
     def forward(self, X, state):
         # 输出'X'的形状：(batch_size,num_steps,embed_size)
         X = self.embedding(X).permute(1, 0, 2)
         # 广播context，使其具有与X相同的num_steps
         context = state[-1].repeat(X.shape[0], 1, 1)
+
+        #state携带着decoder的最新时间步隐状态和encoder输出状态
+        encode = state[1]
+        state = state[0]
+
         X_and_context = torch.cat((X, context), 2)
         output, state = self.rnn(X_and_context, state)
         output = self.dense(output).permute(1, 0, 2)
         # output的形状:(batch_size,num_steps,vocab_size)
         # state的形状:(num_layers,batch_size,num_hiddens)
-        return output, state
+        return output, (state, encode)
 
 def sequence_mask(X, valid_len, value=0):
     """在序列中屏蔽不相关的项"""
@@ -89,6 +94,9 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
         for batch in data_iter:
             optimizer.zero_grad()
             X, X_valid_len, Y, Y_valid_len = [x.to(device) for x in batch]
+            #import pdb; pdb.set_trace()
+            #print(src_vocab.to_tokens(list(X[0].cpu().numpy())), X_valid_len[0], tgt_vocab.to_tokens(list(Y[0].cpu().numpy())), Y_valid_len[0])
+            print(src_vocab.to_tokens(list(X[0].cpu().numpy())), tgt_vocab.to_tokens(list(Y[0].cpu().numpy())))
             bos = torch.tensor([tgt_vocab['<bos>']] * Y.shape[0], device=device).reshape(-1, 1)
             dec_input = torch.cat([bos, Y[:, :-1]], 1)  # 强制教学
             Y_hat, _ = net(X, dec_input, X_valid_len)
@@ -101,7 +109,7 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
                 metric.add(l.sum(), num_tokens)
         if (epoch + 1) % 10 == 0:
             animator.add(epoch + 1, (metric[0] / metric[1],))
-    print(f'loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} ' f'tokens/sec on {str(device)}')
+        print(f'{epoch}/{num_epochs} loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} ' f'tokens/sec on {str(device)}')
     torch.save(net.state_dict(), 'model.pth')
 
 def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps, device, save_attention_weights=False):
@@ -132,7 +140,11 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps, device, 
 
 def bleu(pred_seq, label_seq, k):  #@save
     """计算BLEU"""
-    pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
+    if os.getenv("EN_CN", None):
+        pred_tokens, label_tokens = list(pred_seq), list(label_seq)
+    else:
+        pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
+    print('bleu', label_tokens, pred_tokens)
     len_pred, len_label = len(pred_tokens), len(label_tokens)
     score = math.exp(min(0, 1 - len_label / len_pred))
     for n in range(1, k + 1):
@@ -147,29 +159,37 @@ def bleu(pred_seq, label_seq, k):  #@save
     return score
 
 if __name__ == '__main__':
-    embed_size, num_hiddens, num_layers, dropout = 32, 32, 2, 0.1
-    batch_size, num_steps = 64, 10
-    lr, num_epochs, device = 0.005, 300, d2l.try_gpu()
+    embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.1
+    batch_size, num_steps = 64*2, 10
+    lr, num_epochs, device = 0.005, 100, d2l.try_gpu()
     #device = 'cpu'
     #num_epochs = 1
     #import pdb; pdb.set_trace()
-    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps)
+    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 20000)
     encoder = Seq2SeqEncoder(len(src_vocab), embed_size, num_hiddens, num_layers, dropout)
     decoder = Seq2SeqDecoder(len(tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
     net = d2l.EncoderDecoder(encoder, decoder)
     print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
     if 0:
         train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device)
-        exit()
     else:
         #src_vocab_len, tgt_vocab_len = 184, 201
-        net = d2l.EncoderDecoder(encoder, decoder)
         device = 'cpu'
         net.load_state_dict(torch.load('model.pth', map_location='cpu'))
-        engs = ['go .', "i lost .", 'he\'s calm .', 'i\'m home .']
-        fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']
+        engs = ['After he had graduated from the university, he taught English for two years .',
+                "According to newspaper reports, there was an airplane accident last evening",
+                "Tom is going to a concert this evening",
+                "These products are of the same quality",
+                "Who are you ?",
+                "I know ."]
+        fras = ["從他大學畢業以後，他教了兩年的英語。",
+                "根據報載，有一架飛機昨天晚上發生了意外",
+                "汤姆今晚会去演唱会",
+                "这些产品质量同等",
+                "你是谁？",
+                "我知道。"]
         for eng, fra in zip(engs, fras):
             translation, attention_weight_seq = predict_seq2seq(net, eng, src_vocab, tgt_vocab, num_steps, device)
-            print(f'{eng} => {translation}, bleu {bleu(translation, fra, k=2):.3f}')
-            break
+            print(f'{eng} => {translation}, bleu {bleu(translation, fra, k=1):.3f}\n')
+            #break
     
