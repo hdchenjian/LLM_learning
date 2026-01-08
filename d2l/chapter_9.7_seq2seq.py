@@ -141,6 +141,44 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps, device, 
     else:
         return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
 
+def predict_seq2seq1(net, src_sentence, src_vocab, tgt_vocab, num_steps, device, save_attention_weights=False):
+    net.eval()
+    src_tokens = src_vocab[src_sentence.lower().split(' ')] + [src_vocab['<eos>']]
+    enc_valid_len = torch.tensor([len(src_tokens)], device=device)
+    src_tokens = d2l.truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
+    # 添加批量轴
+    enc_X = torch.unsqueeze(torch.tensor(src_tokens, dtype=torch.long, device=device), dim=0)
+    enc_outputs = net.encoder(enc_X, enc_valid_len)
+    dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
+    # 添加批量轴
+    dec_X = torch.unsqueeze(torch.tensor([tgt_vocab['<bos>']], dtype=torch.long, device=device), dim=0)
+    output_seq, attention_weight_seq = [], []
+    for _ in range(num_steps):
+        Y, dec_state = net.decoder(dec_X, dec_state)
+        #print('dec_X', dec_X.shape, Y.shape)
+        # 我们使用具有预测最高可能性的词元，作为解码器在下一时间步的输入
+        #import pdb; pdb.set_trace()
+        dec_X_ = torch.unsqueeze(Y.argmax(dim=2)[0][-1:], dim=0)
+        dec_X = torch.cat((dec_X, dec_X_), dim=1)
+        print('dec_X', dec_X.shape, dec_X)
+        if Y.argmax(dim=2)[0][-1] == tgt_vocab['<eos>']:
+            break
+        continue
+        pred = dec_X.squeeze(dim=0).type(torch.int32).item()
+        # 保存注意力权重（稍后讨论）
+        if save_attention_weights:
+            attention_weight_seq.append(net.decoder.attention_weights)
+        # 一旦序列结束词元被预测，输出序列的生成就完成了
+        if pred == tgt_vocab['<eos>']:
+            break
+        output_seq.append(pred)
+    #exit()
+    output_seq = list(dec_X[0][1:-1])
+    if os.getenv("EN_CN", None):
+        return ''.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
+    else:
+        return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
+
 def bleu(pred_seq, label_seq, k):  #@save
     """计算BLEU"""
     if os.getenv("EN_CN", None):
@@ -192,7 +230,7 @@ if __name__ == '__main__':
                 "这些产品质量同等",
                 "你是谁？",]
         for eng, fra in zip(engs, fras):
-            translation, attention_weight_seq = predict_seq2seq(net, eng, src_vocab, tgt_vocab, num_steps, device)
+            translation, attention_weight_seq = predict_seq2seq1(net, eng, src_vocab, tgt_vocab, num_steps, device)
             print(f'{eng} => {translation}, bleu {bleu(translation, fra, k=1):.3f}\n')
             #break
     
