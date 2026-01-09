@@ -160,7 +160,7 @@ def predict_seq2seq1(net, src_sentence, src_vocab, tgt_vocab, num_steps, device,
         #import pdb; pdb.set_trace()
         dec_X_ = torch.unsqueeze(Y.argmax(dim=2)[0][-1:], dim=0)
         dec_X = torch.cat((dec_X, dec_X_), dim=1)
-        print('dec_X', dec_X.shape, dec_X)
+        #print('dec_X', dec_X.shape, dec_X)
         if Y.argmax(dim=2)[0][-1] == tgt_vocab['<eos>']:
             break
     output_seq = list(dec_X[0][1:-1])
@@ -175,7 +175,7 @@ def bleu(pred_seq, label_seq, k):  #@save
         pred_tokens, label_tokens = list(pred_seq), list(label_seq)
     else:
         pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
-    print('bleu', label_tokens, pred_tokens)
+    #print('bleu', label_tokens, pred_tokens)
     len_pred, len_label = len(pred_tokens), len(label_tokens)
     score = math.exp(min(0, 1 - len_label / len_pred))
     for n in range(1, k + 1):
