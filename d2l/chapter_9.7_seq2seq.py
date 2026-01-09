@@ -221,6 +221,6 @@ if __name__ == '__main__':
                 "你是谁？",]
         for eng, fra in zip(engs, fras):
             translation, attention_weight_seq = predict_seq2seq1(net, eng, src_vocab, tgt_vocab, num_steps, device)
-            print(f'{eng} => {translation}, bleu {bleu(translation, fra, k=1):.3f}\n')
+            print(f'{eng} => {translation}, bleu {bleu(translation, fra, k=1):.3f}')
             #break
     
