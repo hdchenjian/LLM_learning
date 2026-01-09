@@ -2,6 +2,7 @@ import collections
 import math
 import torch, os
 from torch import nn
+import numpy as np
 import d2l
 
 n_train = 50  # 训练样本数
@@ -39,6 +40,8 @@ Y_tile = y_train.repeat((n_train, 1))
 keys = X_tile[(1 - torch.eye(n_train)).type(torch.bool)].reshape((n_train, -1))
 # values的形状:('n_train'，'n_train'-1)
 values = Y_tile[(1 - torch.eye(n_train)).type(torch.bool)].reshape((n_train, -1))
+#keys = X_tile
+#values = Y_tile
 
 net = NWKernelRegression()
 loss = nn.MSELoss(reduction='none')
@@ -47,7 +50,7 @@ animator = d2l.Animator(xlabel='epoch', ylabel='loss', xlim=[1, 5])
 
 for epoch in range(5):
     trainer.zero_grad()
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     l = loss(net(x_train, keys, values), y_train)
     l.sum().backward()
     trainer.step()
@@ -59,6 +62,9 @@ keys = x_train.repeat((n_test, 1))
 # value的形状:(n_test，n_train)
 values = y_train.repeat((n_test, 1))
 y_hat = net(x_test, keys, values).unsqueeze(1).detach()
-plot_kernel_reg(y_hat)
+#test_loss = loss(y_hat, y_truth)
+test_loss = np.sum(np.abs((y_hat.squeeze(1) - y_truth).numpy())) / y_truth.shape[0]
+print('test loss', test_loss, net.w)
+#plot_kernel_reg(y_hat)
 
-d2l.show_heatmaps(net.attention_weights.unsqueeze(0).unsqueeze(0), xlabel='Sorted training inputs', ylabel='Sorted testing inputs')
+#d2l.show_heatmaps(net.attention_weights.unsqueeze(0).unsqueeze(0), xlabel='Sorted training inputs', ylabel='Sorted testing inputs')
