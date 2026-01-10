@@ -62,18 +62,18 @@ if __name__ == '__main__':
     batch_size, num_steps = 64*2, 10
     lr, num_epochs, device = 0.005, 100, d2l.try_gpu()
 
-    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 100000)
+    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 10000)
     encoder = d2l.Seq2SeqEncoder(len(src_vocab), embed_size, num_hiddens, num_layers, dropout)
     decoder = Seq2SeqAttentionDecoder(len(tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
     net = d2l.EncoderDecoder(encoder, decoder)
     print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
     model_path = 'model_10.4.pth'
-    if 1:
+    if 0:
         train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device, src_vocab)
         torch.save(net.state_dict(), 'model_10.4.pth')
     elif 1:
         os.environ["TEST_DATA"] = '1'
-        num_examples = 130900
+        num_examples = 20000
         source, target  = d2l.load_data_nmt(batch_size, num_steps, num_examples)
         src_array, src_valid_len = d2l.build_array_nmt(source, src_vocab, num_steps)
         tgt_array, tgt_valid_len = d2l.build_array_nmt(target, tgt_vocab, num_steps)
