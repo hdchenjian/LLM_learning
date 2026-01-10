@@ -111,7 +111,6 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device, src_vocab):
         if (epoch + 1) % 10 == 0:
             animator.add(epoch + 1, (metric[0] / metric[1],))
         print(f'{epoch}/{num_epochs} loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} ' f'tokens/sec on {str(device)}')
-    torch.save(net.state_dict(), 'model_9.7.pth')
 
 def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps, device, save_attention_weights=False):
     net.eval()
@@ -207,6 +206,7 @@ if __name__ == '__main__':
     print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
     if 0:
         train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device, src_vocab)
+        torch.save(net.state_dict(), 'model_9.7.pth')
     elif 1:
         os.environ["TEST_DATA"] = '1'
         num_examples = 130900
