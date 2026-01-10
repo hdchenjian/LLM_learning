@@ -1,8 +1,8 @@
-import torch, os
+import torch, os, time
 from torch import nn
 import numpy as np
 import d2l
-from chapter_9_7_seq2seq import predict_seq2seq
+from chapter_9_7_seq2seq import predict_seq2seq, bleu
 #os.environ["EN_CN"] = '1'
 
 class AttentionDecoder(d2l.Decoder):
