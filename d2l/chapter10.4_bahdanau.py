@@ -2,7 +2,7 @@ import torch, os, time
 from torch import nn
 import numpy as np
 import d2l
-from chapter_9_7_seq2seq import predict_seq2seq, bleu
+from chapter_9_7_seq2seq import predict_seq2seq, bleu, train_seq2seq
 #os.environ["EN_CN"] = '1'
 
 class AttentionDecoder(d2l.Decoder):
@@ -68,8 +68,8 @@ if __name__ == '__main__':
     net = d2l.EncoderDecoder(encoder, decoder)
     print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
     model_path = 'model_10.4.pth'
-    if 0:
-        d2l.train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device)
+    if 1:
+        train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device, src_vocab)
         torch.save(net.state_dict(), 'model_10.4.pth')
     elif 1:
         os.environ["TEST_DATA"] = '1'
