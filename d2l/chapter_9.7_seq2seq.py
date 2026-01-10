@@ -2,7 +2,7 @@ import collections, time
 import math
 import torch, os
 from torch import nn
-os.environ["EN_CN"] = '1'
+#os.environ["EN_CN"] = '1'
 import d2l
 
 # https://zh.d2l.ai/_images/seq2seq-details.svg
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     #device = 'cpu'
     #num_epochs = 1
     #import pdb; pdb.set_trace()
-    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 20000)
+    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 100000)
     encoder = Seq2SeqEncoder(len(src_vocab), embed_size, num_hiddens, num_layers, dropout)
     decoder = Seq2SeqDecoder(len(tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
     net = d2l.EncoderDecoder(encoder, decoder)
@@ -200,7 +200,7 @@ if __name__ == '__main__':
         train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device)
     elif 1:
         os.environ["TEST_DATA"] = '1'
-        num_examples = 30900
+        num_examples = 130900
         source, target  = d2l.load_data_nmt(batch_size, num_steps, num_examples)
         src_array, src_valid_len = d2l.build_array_nmt(source, src_vocab, num_steps)
         tgt_array, tgt_valid_len = d2l.build_array_nmt(target, tgt_vocab, num_steps)
@@ -219,7 +219,10 @@ if __name__ == '__main__':
             X, X_valid_len, Y, Y_valid_len = [x.to(device) for x in batch]
             #print(src_vocab.to_tokens(list(X[0].cpu().numpy())), tgt_vocab.to_tokens(list(Y[0].cpu().numpy())))
             src_str = ' '.join(src_vocab.to_tokens(list(X[0].cpu().numpy()))).replace('<eos>', '').replace('<pad>', '').strip(' ')
-            target_str = ''.join(tgt_vocab.to_tokens(list(Y[0].cpu().numpy()))).replace('<eos>', '').replace('<pad>', '')
+            if os.getenv("EN_CN", None):
+                target_str = ''.join(tgt_vocab.to_tokens(list(Y[0].cpu().numpy()))).replace('<eos>', '').replace('<pad>', '')
+            else:
+                target_str = ' '.join(tgt_vocab.to_tokens(list(Y[0].cpu().numpy()))).replace('<eos>', '').replace('<pad>', '').strip(' ')
             #print(src_str, target_str)
             #import pdb; pdb.set_trace()
             translation, attention_weight_seq = predict_seq2seq(net, src_str, src_vocab, tgt_vocab, num_steps, device)
@@ -227,8 +230,8 @@ if __name__ == '__main__':
             print(f'{src_str} => {translation}, bleu {score:.3f}')
             test_num += 1
             score_sum += score
-            #if test_num > 30: break
-        print(f'avg bleu: {score_sum:.4f} / {test_num}, {score_sum / test_num:.4f}, spend {time.time() - start}')
+            #if test_num > 10: break
+        print(f'avg bleu: {score_sum:.4f} / {test_num} = {score_sum / test_num:.4f}, spend {time.time() - start}')
     else:
         #src_vocab_len, tgt_vocab_len = 184, 201
         device = 'cpu'
