@@ -1,4 +1,4 @@
-import collections
+import collections, time
 import math
 import torch, os
 from torch import nn
@@ -33,24 +33,19 @@ class Seq2SeqDecoder(d2l.Decoder):
         self.dense = nn.Linear(num_hiddens, vocab_size)
 
     def init_state(self, enc_outputs, *args):
-        return (enc_outputs[1], enc_outputs[1][-1])
+        return enc_outputs[1]
 
     def forward(self, X, state):
         # 输出'X'的形状：(batch_size,num_steps,embed_size)
         X = self.embedding(X).permute(1, 0, 2)
         # 广播context，使其具有与X相同的num_steps
         context = state[-1].repeat(X.shape[0], 1, 1)
-
-        #state携带着decoder的最新时间步隐状态和encoder输出状态
-        encode = state[1]
-        state = state[0]
-
         X_and_context = torch.cat((X, context), 2)
         output, state = self.rnn(X_and_context, state)
         output = self.dense(output).permute(1, 0, 2)
         # output的形状:(batch_size,num_steps,vocab_size)
         # state的形状:(num_layers,batch_size,num_hiddens)
-        return output, (state, encode)
+        return output, state
 
 def sequence_mask(X, valid_len, value=0):
     """在序列中屏蔽不相关的项"""
@@ -110,7 +105,7 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
         if (epoch + 1) % 10 == 0:
             animator.add(epoch + 1, (metric[0] / metric[1],))
         print(f'{epoch}/{num_epochs} loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} ' f'tokens/sec on {str(device)}')
-    torch.save(net.state_dict(), 'model.pth')
+    torch.save(net.state_dict(), 'model_9.7.pth')
 
 def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps, device, save_attention_weights=False):
     net.eval()
@@ -203,10 +198,41 @@ if __name__ == '__main__':
     print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
     if 0:
         train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device)
+    elif 1:
+        os.environ["TEST_DATA"] = '1'
+        num_examples = 30900
+        source, target  = d2l.load_data_nmt(batch_size, num_steps, num_examples)
+        src_array, src_valid_len = d2l.build_array_nmt(source, src_vocab, num_steps)
+        tgt_array, tgt_valid_len = d2l.build_array_nmt(target, tgt_vocab, num_steps)
+        data_arrays = (src_array[num_examples + 1 - 5000 :], src_valid_len[num_examples + 1 - 5000 :],
+                       tgt_array[num_examples + 1 - 5000 :], tgt_valid_len[num_examples + 1 - 5000 :])
+        test_iter = d2l.load_array(data_arrays, 1, is_train=False)
+
+        print('device', device)
+        device = 'cuda:0'
+        net.load_state_dict(torch.load('model_9.7.pth', map_location=device))
+        net.to(device)
+        test_num = 0
+        score_sum = 0
+        start = time.time()
+        for batch in test_iter:
+            X, X_valid_len, Y, Y_valid_len = [x.to(device) for x in batch]
+            #print(src_vocab.to_tokens(list(X[0].cpu().numpy())), tgt_vocab.to_tokens(list(Y[0].cpu().numpy())))
+            src_str = ' '.join(src_vocab.to_tokens(list(X[0].cpu().numpy()))).replace('<eos>', '').replace('<pad>', '').strip(' ')
+            target_str = ''.join(tgt_vocab.to_tokens(list(Y[0].cpu().numpy()))).replace('<eos>', '').replace('<pad>', '')
+            #print(src_str, target_str)
+            #import pdb; pdb.set_trace()
+            translation, attention_weight_seq = predict_seq2seq(net, src_str, src_vocab, tgt_vocab, num_steps, device)
+            score = bleu(translation, target_str, k=2)
+            print(f'{src_str} => {translation}, bleu {score:.3f}')
+            test_num += 1
+            score_sum += score
+            #if test_num > 30: break
+        print(f'avg bleu: {score_sum:.4f} / {test_num}, {score_sum / test_num:.4f}, spend {time.time() - start}')
     else:
         #src_vocab_len, tgt_vocab_len = 184, 201
         device = 'cpu'
-        net.load_state_dict(torch.load('model.pth', map_location='cpu'))
+        net.load_state_dict(torch.load('model_9.7.pth', map_location='cpu'))
         engs = ["I know .",
                 'After he had graduated from the university, he taught English for two years .',
                 "According to newspaper reports, there was an airplane accident last evening",
@@ -220,7 +246,7 @@ if __name__ == '__main__':
                 "这些产品质量同等",
                 "你是谁？",]
         for eng, fra in zip(engs, fras):
-            translation, attention_weight_seq = predict_seq2seq1(net, eng, src_vocab, tgt_vocab, num_steps, device)
+            translation, attention_weight_seq = predict_seq2seq(net, eng, src_vocab, tgt_vocab, num_steps, device)
             print(f'{eng} => {translation}, bleu {bleu(translation, fra, k=1):.3f}')
             #break
     
