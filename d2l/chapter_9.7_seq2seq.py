@@ -33,6 +33,7 @@ class Seq2SeqDecoder(d2l.Decoder):
         self.dense = nn.Linear(num_hiddens, vocab_size)
 
     def init_state(self, enc_outputs, *args):
+        return (enc_outputs[1], enc_outputs[1][-1])
         return enc_outputs[1]
 
     def forward(self, X, state):
@@ -40,12 +41,17 @@ class Seq2SeqDecoder(d2l.Decoder):
         X = self.embedding(X).permute(1, 0, 2)
         # 广播context，使其具有与X相同的num_steps
         context = state[-1].repeat(X.shape[0], 1, 1)
+
+        #state携带着decoder的最新时间步隐状态和encoder输出状态
+        encode = state[1]
+        state = state[0]
+
         X_and_context = torch.cat((X, context), 2)
         output, state = self.rnn(X_and_context, state)
         output = self.dense(output).permute(1, 0, 2)
         # output的形状:(batch_size,num_steps,vocab_size)
         # state的形状:(num_layers,batch_size,num_hiddens)
-        return output, state
+        return output, (state, encode)
 
 def sequence_mask(X, valid_len, value=0):
     """在序列中屏蔽不相关的项"""
