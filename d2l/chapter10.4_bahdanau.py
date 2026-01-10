@@ -2,6 +2,7 @@ import torch, os
 from torch import nn
 import numpy as np
 import d2l
+from chapter_9_7_seq2seq import predict_seq2seq
 #os.environ["EN_CN"] = '1'
 
 class AttentionDecoder(d2l.Decoder):
