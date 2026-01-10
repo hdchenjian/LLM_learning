@@ -3,7 +3,7 @@ from torch import nn
 import numpy as np
 import d2l
 from chapter_9_7_seq2seq import predict_seq2seq, bleu, train_seq2seq
-#os.environ["EN_CN"] = '1'
+os.environ["EN_CN"] = '1'
 
 class AttentionDecoder(d2l.Decoder):
     """带有注意力机制解码器的基本接口"""
@@ -18,7 +18,8 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
                  dropout=0, **kwargs):
         super(Seq2SeqAttentionDecoder, self).__init__(**kwargs)
-        self.attention = d2l.AdditiveAttention(num_hiddens, num_hiddens, num_hiddens, dropout)
+        #self.attention = d2l.AdditiveAttention(num_hiddens, num_hiddens, num_hiddens, dropout)
+        self.attention = d2l.DotProductAttention(dropout)
         self.embedding = nn.Embedding(vocab_size, embed_size)
         self.rnn = nn.GRU(embed_size + num_hiddens, num_hiddens, num_layers, dropout=dropout)
         self.dense = nn.Linear(num_hiddens, vocab_size)
@@ -58,11 +59,11 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
         return self._attention_weights
 
 if __name__ == '__main__':
-    embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.1
+    embed_size, num_hiddens, num_layers, dropout = 128, 128, 2, 0.1
     batch_size, num_steps = 64*2, 10
-    lr, num_epochs, device = 0.005, 100, d2l.try_gpu()
+    lr, num_epochs, device = 0.005, 40, d2l.try_gpu()
 
-    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 10000)
+    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 20000)
     encoder = d2l.Seq2SeqEncoder(len(src_vocab), embed_size, num_hiddens, num_layers, dropout)
     decoder = Seq2SeqAttentionDecoder(len(tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
     net = d2l.EncoderDecoder(encoder, decoder)
@@ -73,7 +74,7 @@ if __name__ == '__main__':
         torch.save(net.state_dict(), 'model_10.4.pth')
     elif 1:
         os.environ["TEST_DATA"] = '1'
-        num_examples = 20000
+        num_examples = 30900
         source, target  = d2l.load_data_nmt(batch_size, num_steps, num_examples)
         src_array, src_valid_len = d2l.build_array_nmt(source, src_vocab, num_steps)
         tgt_array, tgt_valid_len = d2l.build_array_nmt(target, tgt_vocab, num_steps)
