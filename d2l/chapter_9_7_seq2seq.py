@@ -74,7 +74,7 @@ class MaskedSoftmaxCELoss(nn.CrossEntropyLoss):
         weighted_loss = (unweighted_loss * weights).mean(dim=1)
         return weighted_loss
 
-def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
+def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device, src_vocab):
     def xavier_init_weights(m):
         if type(m) == nn.Linear:
             nn.init.xavier_uniform_(m.weight)
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     net = d2l.EncoderDecoder(encoder, decoder)
     print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
     if 0:
-        train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device)
+        train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device, src_vocab)
     elif 1:
         os.environ["TEST_DATA"] = '1'
         num_examples = 130900
