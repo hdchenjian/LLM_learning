@@ -59,10 +59,16 @@ class TransformerDecoder(d2l.AttentionDecoder):
         self.dense = nn.Linear(num_hiddens, vocab_size)
 
     def init_state(self, enc_outputs, enc_valid_lens, *args):
+        self.seqX = None # modify
         return [enc_outputs, enc_valid_lens, [None] * self.num_layers]
 
     def forward(self, X, state):
+        if not self.training: # modify
+            self.seqX = X if self.seqX is None else torch.cat((self.seqX, X), dim=1)
+            X = self.seqX
         X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
+        if not self.training: # modify
+            X = X[:, -1:, :]
         self._attention_weights = [[None] * len(self.blks) for _ in range (2)]
         for i, blk in enumerate(self.blks):
             X, state = blk(X, state)
