@@ -84,8 +84,8 @@ class TransformerDecoder(d2l.AttentionDecoder):
 
 if __name__ == '__main__':
     num_hiddens, num_layers, dropout, batch_size, num_steps = 128, 2, 0.1, 64*2, 10
-    lr, num_epochs, device = 0.005, 150, d2l.try_gpu()
-    ffn_num_input, ffn_num_hiddens, num_heads = 128, 128, 4
+    lr, num_epochs, device = 0.005, 300, d2l.try_gpu()
+    ffn_num_input, ffn_num_hiddens, num_heads = 128, 128, 8
     key_size, query_size, value_size = 128, 128, 128
     norm_shape = [128]
     
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     net = d2l.EncoderDecoder(encoder, decoder)
     print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
     model_path = 'model_10.7_cn.pth'
-    if 0:
+    if 1:
         train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device, src_vocab)
         torch.save(net.state_dict(), model_path)
     elif 1:
