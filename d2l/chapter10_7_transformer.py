@@ -3,7 +3,7 @@ from torch import nn
 import numpy as np
 import d2l
 from chapter_9_7_seq2seq import predict_seq2seq, bleu, train_seq2seq
-#os.environ["EN_CN"] = '1'
+os.environ["EN_CN"] = '1'
 
 class DecoderBlock(nn.Module):
     """解码器中第i个块"""
@@ -83,25 +83,21 @@ if __name__ == '__main__':
     key_size, query_size, value_size = 128, 128, 128
     norm_shape = [128]
     
-    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 100000)
+    train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 20000)
     
-    encoder = d2l.TransformerEncoder(
-        len(src_vocab), key_size, query_size, value_size, num_hiddens,
-        norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
-        num_layers, dropout)
-    decoder = TransformerDecoder(
-        len(tgt_vocab), key_size, query_size, value_size, num_hiddens,
-        norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
-        num_layers, dropout)
+    encoder = d2l.TransformerEncoder(len(src_vocab), key_size, query_size, value_size, num_hiddens,
+                                     norm_shape, ffn_num_input, ffn_num_hiddens, num_heads, num_layers, dropout)
+    decoder = TransformerDecoder(len(tgt_vocab), key_size, query_size, value_size, num_hiddens,
+                                 norm_shape, ffn_num_input, ffn_num_hiddens, num_heads, num_layers, dropout)
     net = d2l.EncoderDecoder(encoder, decoder)
     print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
-    model_path = 'model_10.7.pth'
+    model_path = 'model_10.7_cn.pth'
     if 0:
         train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device, src_vocab)
         torch.save(net.state_dict(), model_path)
     elif 1:
         os.environ["TEST_DATA"] = '1'
-        num_examples = 130900
+        num_examples = 30900
         source, target  = d2l.load_data_nmt(batch_size, num_steps, num_examples)
         src_array, src_valid_len = d2l.build_array_nmt(source, src_vocab, num_steps)
         tgt_array, tgt_valid_len = d2l.build_array_nmt(target, tgt_vocab, num_steps)
