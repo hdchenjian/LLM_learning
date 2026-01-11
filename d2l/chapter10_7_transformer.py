@@ -60,15 +60,19 @@ class TransformerDecoder(d2l.AttentionDecoder):
 
     def init_state(self, enc_outputs, enc_valid_lens, *args):
         self.seqX = None # modify
+
         return [enc_outputs, enc_valid_lens, [None] * self.num_layers]
 
     def forward(self, X, state):
         if not self.training: # modify
             self.seqX = X if self.seqX is None else torch.cat((self.seqX, X), dim=1)
             X = self.seqX
+
         X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
+
         if not self.training: # modify
             X = X[:, -1:, :]
+
         self._attention_weights = [[None] * len(self.blks) for _ in range (2)]
         for i, blk in enumerate(self.blks):
             X, state = blk(X, state)
@@ -98,7 +102,7 @@ if __name__ == '__main__':
     net = d2l.EncoderDecoder(encoder, decoder)
     print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
     model_path = 'model_10.7_cn.pth'
-    if 1:
+    if 0:
         train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device, src_vocab)
         torch.save(net.state_dict(), model_path)
     elif 1:
