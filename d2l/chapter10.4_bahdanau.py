@@ -71,7 +71,7 @@ if __name__ == '__main__':
     model_path = 'model_10.4.pth'
     if 0:
         train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device, src_vocab)
-        torch.save(net.state_dict(), 'model_10.4.pth')
+        torch.save(net.state_dict(), model_path)
     elif 1:
         os.environ["TEST_DATA"] = '1'
         num_examples = 30900
@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
         print('device', device)
         device = 'cuda:0'
-        net.load_state_dict(torch.load('model_10.4.pth', map_location=device))
+        net.load_state_dict(torch.load(model_path, map_location=device))
         net.to(device)
         test_num = 0
         score_sum = 0
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         print(f'avg bleu: {score_sum:.4f} / {test_num} = {score_sum / test_num:.4f}, spend {time.time() - start}')
     else:
         device = 'cpu'
-        net.load_state_dict(torch.load('model_10.4.pth', map_location='cpu'))
+        net.load_state_dict(torch.load(model_path, map_location='cpu'))
         engs = ["I know .",
                 'After he had graduated from the university, he taught English for two years .',
                 "According to newspaper reports, there was an airplane accident last evening",
