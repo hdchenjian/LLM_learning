@@ -87,11 +87,11 @@ class TransformerDecoder(d2l.AttentionDecoder):
         return self._attention_weights
 
 if __name__ == '__main__':
-    num_hiddens, num_layers, dropout, batch_size, num_steps = 128, 2, 0.1, 64*2, 10
+    num_hiddens, num_layers, dropout, batch_size, num_steps = 64, 2, 0.1, 64*2, 10
     lr, num_epochs, device = 0.005, 300, d2l.try_gpu()
-    ffn_num_input, ffn_num_hiddens, num_heads = 128, 128, 8
-    key_size, query_size, value_size = 128, 128, 128
-    norm_shape = [128]
+    ffn_num_input, ffn_num_hiddens, num_heads = 64, 64, 8
+    key_size, query_size, value_size = 64, 64, 64
+    norm_shape = [64]
     
     train_iter, src_vocab, tgt_vocab = d2l.load_data_nmt(batch_size, num_steps, 20000)
     
