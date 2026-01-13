@@ -2,7 +2,6 @@ import torch, os, time, math
 from torch import nn
 import numpy as np
 import d2l
-from chapter_9_7_seq2seq import predict_seq2seq, bleu, train_seq2seq
 #os.environ["EN_CN"] = '1'
 
 def get_bert_encoding(net, tokens_a, tokens_b=None):
@@ -55,13 +54,19 @@ if __name__ == '__main__':
 
     #print('len(src_vocab), tgt_vocab', len(src_vocab), len(tgt_vocab))
     model_path = 'model_14.7_bert.pth'
-    if 0:
+    if 1:
         train_bert(train_iter, net, loss, len(vocab), devices, 50)
         torch.save(net.state_dict(), model_path)
     else:
-        tokens_a = ['a', 'crane', 'is', 'flying']
-        encoded_text = get_bert_encoding(net, tokens_a)
-        # 词元：'<cls>','a','crane','is','flying','<sep>'
-        encoded_text_cls = encoded_text[:, 0, :]
-        encoded_text_crane = encoded_text[:, 2, :]
-        encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3]
+        #print('devices', devices)
+        devices[0] = 'cpu'
+        net.load_state_dict(torch.load(model_path, map_location=devices[0]))
+
+        tokens_a, tokens_b = ['a', 'crane', 'driver', 'came'], ['he', 'just', 'left']
+        encoded_pair = get_bert_encoding(net, tokens_a, tokens_b)
+        import pdb; pdb.set_trace()
+        # 词元：'<cls>','a','crane','driver','came','<sep>','he','just', 'left','<sep>'
+        encoded_pair_cls = encoded_pair[:, 0, :]
+        encoded_pair_crane = encoded_pair[:, 2, :]
+        encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3]
+    
