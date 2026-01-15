@@ -11,8 +11,8 @@ def test_python():
     test_ckpt_dir = './'
 
     device = "cpu"
-    checkpoint = os.path.join(test_ckpt_dir, "stories15M.pt")
-    moe = 1
+    checkpoint = os.path.join(test_ckpt_dir, "out/llama/ckpt.pt")
+    moe = 0
     if moe:
         os.environ["MOE_BLOCK"] = '1'
         checkpoint = os.path.join(test_ckpt_dir, "out/ckpt.pt")
