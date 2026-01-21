@@ -173,7 +173,7 @@ class Attention(nn.Module):
             print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
             # 创建一个上三角矩阵，用于遮蔽未来信息。
             mask = torch.full((1, 1, args.max_seq_len, args.max_seq_len), float("-inf"))
-            mask = torch.triu(mask, diagonal=1)
+            mask = torch.triu(mask, diagonal=1) #下三角包括对角线全为0
             # 注册为模型的缓冲区
             self.register_buffer("mask", mask)
 
@@ -287,6 +287,7 @@ class Transformer(PreTrainedModel):
     def __init__(self, args: ModelConfig = None):
         super().__init__(args)
         # 初始化模型参数
+        print('model args', args)
         self.args = args
         # 词汇表大小
         self.vocab_size = args.vocab_size
@@ -381,17 +382,21 @@ class Transformer(PreTrainedModel):
 
     
     @torch.inference_mode()
-    def generate(self, idx, stop_id=None, max_new_tokens=256, temperature=1.0, top_k=None):
+    def generate(self, idx, tokenizer, stop_id=None, max_new_tokens=256, temperature=1.0, top_k=None):
         """
         给定输入序列 idx（形状为 (bz,seq_len) 的长整型张量），通过多次生成新 token 来完成序列。
         在 model.eval() 模式下运行。效率较低的采样版本，没有使用键k/v cache。
         """
         index = idx.shape[1]
+        count = 1
         for _ in range(max_new_tokens):
             # 如果序列上下文过长，截断它到最大长度
             idx_cond = idx if idx.size(1) <= self.args.max_seq_len else idx[:, -self.args.max_seq_len:]
             
             # 前向传播获取序列中最后一个位置的 logits
+            #import pdb; pdb.set_trace()
+            print(f'\n{count}/{max_new_tokens} input: ', tokenizer.decode(idx_cond[0].cpu().numpy()).replace('\n', '# '))
+            count += 1
             logits = self(idx_cond).logits
             logits = logits[:, -1, :] # 只保留最后一个时间步的输出
             
