@@ -6,4 +6,4 @@ OPENAI_API_KEY="sk-08f9217e9e2d4c9d84a911c9976ced08"
 OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
 OPENAI_MODEL_NAME="qwen3-max"
 
-python dialogue_extractor.py wukong.txt -t 1 --no-concurrent --stats -o out.txt
+python dialogue_extractor.py wukong.txt -t 8 concurrent --stats -o out.txt
