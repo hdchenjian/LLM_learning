@@ -1,4 +1,4 @@
-import math
+import math, os
 import inspect
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple
@@ -242,10 +242,44 @@ class MLP(nn.Module):
     def forward(self, x):
         # 前向传播函数
         # 首先，输入x通过第一层线性变换和SILU激活函数
-        # 然后，结果乘以输入x通过第三层线性变换的结果
+        # 然后，进行逐元素乘输入x通过第三层线性变换的结果
         # 最后，通过第二层线性变换和dropout层
         return self.dropout(self.w2(F.silu(self.w1(x)) * self.w3(x)))
     
+class MoE(nn.Module):
+    def __init__(self, dim: int, hidden_dim: int, multiple_of: int, num_experts: int, top_k: int, dropout: float):
+        super().__init__()
+        self.num_experts = num_experts
+        self.top_k = top_k
+        self.gate = nn.Linear(dim, num_experts, bias=False)
+        self.experts = nn.ModuleList([MLP(dim, hidden_dim, multiple_of, dropout) for _ in range(num_experts)])
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (batch_size, seq_len, dim)
+        B, T, D = x.shape
+        x_flat = x.view(-1, D)
+
+        gate_logits = self.gate(x_flat) # (B*T, num_experts)
+        weights, indices = torch.topk(gate_logits, self.top_k, dim=-1)
+        weights = F.softmax(weights, dim=-1) # 归一化权重
+        output = torch.zeros_like(x_flat)
+
+        for i, expert in enumerate(self.experts):
+            # 3. 找出所有选中当前专家 i 的 token 索引
+            batch_idx, k_idx = torch.where(indices == i)
+            if len(batch_idx) == 0:
+                continue
+
+            # 4. 取出对应的输入进行计算
+            expert_input = x_flat[batch_idx]
+            expert_out = expert(expert_input)
+
+            # 5. 获取对应的权重
+            expert_weights = weights[batch_idx, k_idx].unsqueeze(-1) # (num_selected, 1)
+
+            # 6. 将结果加权累加回输出张量
+            output.index_add_(0, batch_idx, expert_out * expert_weights)
+        return output.view(B, T, D)
 
 class DecoderLayer(nn.Module):
     def __init__(self, layer_id: int, args: ModelConfig):
@@ -259,12 +293,10 @@ class DecoderLayer(nn.Module):
         # 定义LLaMA2Attention对象，用于进行多头注意力计算
         self.attention = Attention(args)
         # 定义LLaMAMLP对象，用于进行前馈神经网络计算
-        self.feed_forward = MLP(
-            dim=args.dim,
-            hidden_dim=args.hidden_dim,
-            multiple_of=args.multiple_of,
-            dropout=args.dropout,
-        )
+        if not os.getenv("MOE_BLOCK", None):
+            self.feed_forward = MLP(dim=args.dim, hidden_dim=args.hidden_dim, multiple_of=args.multiple_of, dropout=args.dropout)
+        else:
+            self.feed_forward = MoE(dim=args.dim, hidden_dim=args.hidden_dim, multiple_of=args.multiple_of, num_experts=8, top_k=2, dropout=args.dropout)
         # 定义层的ID
         self.layer_id = layer_id
         # 定义注意力计算的归一化层
@@ -656,6 +688,7 @@ if __name__ == '__main__':
         n_layers=18,
     )
     # 实例化LLaMA2Model
+    #os.environ["MOE_BLOCK"] = '1'
     model = Transformer(args=args)
     # 计算model的全部参数
     num_params = sum(p.numel() for p in model.parameters())
