@@ -29,7 +29,7 @@ else
     # V100 GPU does't support bfloat16
     #vllm serve "qwen3-0.6b/" --port 8001 --dtype bfloat16  --max-model-len 512 --gpu-memory-utilization 0.74
     #vllm serve "facebook_opt-125m" --port 8001 --dtype float16 --max-model-len 128 --cpu-offload-gb 10 --max_num_seqs=16 --gpu-memory-utilization 0.7
-    python -m vllm.entrypoints.openai.api_server --model /home/luyao/d/data/llm/qwen/qwen3-8b --port 8001 --dtype bfloat16 --max-model-len 2048 --cpu-offload-gb 10 --max_num_seqs=128 --gpu-memory-utilization 0.98 --served-model-name qwen3-8b --trust-remote-code
+    python -m vllm.entrypoints.openai.api_server --model /home/luyao/d/data/llm/qwen/qwen3-4b-instruct-2507 --port 8001 --max-model-len 1024 --cpu-offload-gb 1 --max_num_seqs=16 --gpu-memory-utilization 0.98 --served-model-name qwen3-4b-instruct-2507 --trust-remote-code
     exit
     python -m vllm.entrypoints.openai.api_server --model /home/luyao/d/data/llm/qwen/qwen3-0.6b --port 8001 --dtype bfloat16 --max-model-len 2048 --cpu-offload-gb 10 --max_num_seqs=128 --gpu-memory-utilization 0.95 --served-model-name qwen3-0.6b --trust-remote-code
     exit
