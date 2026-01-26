@@ -19,6 +19,7 @@ chat_response = client.chat.completions.create(
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "讲一个笑话"},
+        #{"role": "user", "content": "5的阶乘是多少"},
         #{"role": "user", "content": "Tell me a joke."},
     ],
     extra_body={"chat_template_kwargs": {"enable_thinking": False}}
