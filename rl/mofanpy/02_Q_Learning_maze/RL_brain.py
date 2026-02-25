@@ -11,6 +11,7 @@ import pandas as pd
 
 class QLearningTable:
     def __init__(self, actions, learning_rate=0.01, reward_decay=0.9, e_greedy=0.9):
+        print('actions', actions)
         self.actions = actions  # a list
         self.lr = learning_rate
         self.gamma = reward_decay
@@ -18,6 +19,7 @@ class QLearningTable:
         self.q_table = pd.DataFrame(columns=self.actions, dtype=np.float64)
 
     def choose_action(self, observation):
+        #import pdb; pdb.set_trace()
         self.check_state_exist(observation)
         # action selection
         if np.random.uniform() < self.epsilon:
@@ -42,10 +44,7 @@ class QLearningTable:
     def check_state_exist(self, state):
         if state not in self.q_table.index:
             # append new state to q table
-            self.q_table = self.q_table.append(
-                pd.Series(
-                    [0]*len(self.actions),
-                    index=self.q_table.columns,
-                    name=state,
-                )
-            )
+            #import pdb; pdb.set_trace()
+            #self.q_table = self.q_table.append(pd.Series([0]*len(self.actions), index=self.q_table.columns, name=state,))
+            self.q_table = pd.concat([self.q_table, pd.Series([0]*len(self.actions), index=self.q_table.columns, name=state,).to_frame().T])
+            #print('\nself.q_table', self.q_table)
