@@ -13,7 +13,7 @@ sys.path.insert(0, '../02_Q_Learning_maze')
 from maze_env import Maze
 
 def update():
-    for episode in range(100):
+    for episode in range(63):
         env.title('maze: ' + str(episode))
         observation = env.reset()
         # RL choose action based on observation
@@ -22,8 +22,10 @@ def update():
         # initial all zero eligibility trace
         RL.eligibility_trace *= 0
 
+        step_count = 0
         while True:
-            env.render()
+            #env.render()
+
             # RL take action and get next observation and reward
             observation_, reward, done = env.step(action)
 
@@ -37,13 +39,15 @@ def update():
             observation = observation_
             action = action_
 
+            step_count += 1
             if done:
+                print('episode', episode, reward, step_count)
                 break
     env.destroy()
 
 if __name__ == "__main__":
     env = Maze()
-    RL = SarsaLambdaTable(actions=list(range(env.n_actions)), e_greedy = 0.9)
+    RL = SarsaLambdaTable(actions=list(range(env.n_actions)), e_greedy = 0.8)
 
     env.after(100, update)
     env.mainloop()

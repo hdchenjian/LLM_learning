@@ -128,7 +128,7 @@ class Maze(tk.Tk, object):
         return s_, reward, done
 
     def render(self):
-        time.sleep(0.05)
+        time.sleep(0.02)
         self.update()
 
 
