@@ -32,7 +32,7 @@ class Maze(tk.Tk, object):
         self.action_space = ['u', 'd', 'l', 'r']
         self.n_actions = len(self.action_space)
         self.title('maze')
-        self.geometry('{0}x{1}'.format(MAZE_W * UNIT, MAZE_H * UNIT))
+        self.geometry('{0}x{1}'.format(MAZE_W * UNIT * 2, MAZE_H * UNIT))
         self._build_maze()
 
     def _build_maze(self):
@@ -128,7 +128,7 @@ class Maze(tk.Tk, object):
         return s_, reward, done
 
     def render(self):
-        time.sleep(0.1)
+        time.sleep(0.05)
         self.update()
 
 
