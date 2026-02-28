@@ -5,8 +5,10 @@ from RL_brain import DeepQNetwork
 def run_maze():
     step = 0
     for episode in range(300):
+        env.title('maze: ' + str(episode))
         observation = env.reset()
 
+        step_count = 0
         while True:
             env.render()
             # RL choose action based on observation
@@ -21,7 +23,9 @@ def run_maze():
                 RL.learn()
 
             observation = observation_
+            step_count += 1
             if done:
+                print('episode', episode, reward, step_count)
                 break
             step += 1
 
@@ -42,4 +46,4 @@ if __name__ == "__main__":
                       )
     env.after(100, run_maze)
     env.mainloop()
-    RL.plot_cost()
+    #RL.plot_cost()

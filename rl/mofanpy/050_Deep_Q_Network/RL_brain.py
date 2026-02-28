@@ -140,7 +140,7 @@ class DeepQNetwork:
         # check to replace target parameters
         if self.learn_step_counter % self.replace_target_iter == 0:
             self.sess.run(self.replace_target_op)
-            print('\ntarget_params_replaced\n')
+            #print('\ntarget_params_replaced\n')
 
         # sample batch memory from all memory
         if self.memory_counter > self.memory_size:
@@ -158,6 +158,8 @@ class DeepQNetwork:
 
         # change q_target w.r.t q_eval's action
         q_target = q_eval.copy()
+        #print('q_eval', type(q_eval), q_eval)
+        #import pdb; pdb.set_trace()
 
         batch_index = np.arange(self.batch_size, dtype=np.int32)
         eval_act_index = batch_memory[:, self.n_features].astype(int)
