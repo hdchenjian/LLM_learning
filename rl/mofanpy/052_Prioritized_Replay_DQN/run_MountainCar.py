@@ -12,12 +12,14 @@ gym: 0.8.0
 import gym
 from RL_brain import DQNPrioritizedReplay
 import matplotlib.pyplot as plt
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
 
 env = gym.make('MountainCar-v0')
 env = env.unwrapped
-env.seed(21)
+#env.seed(21)
 MEMORY_SIZE = 10000
 
 sess = tf.Session()
@@ -40,13 +42,13 @@ def train(RL):
     steps = []
     episodes = []
     for i_episode in range(20):
-        observation = env.reset()
+        observation, _ = env.reset()
         while True:
             # env.render()
 
             action = RL.choose_action(observation)
 
-            observation_, reward, done, info = env.step(action)
+            observation_, reward, done, info, _ = env.step(action)
 
             if done: reward = 10
 
