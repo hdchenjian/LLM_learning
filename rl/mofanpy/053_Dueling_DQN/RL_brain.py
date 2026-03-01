@@ -9,7 +9,10 @@ gym: 0.8.0
 """
 
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
 
 np.random.seed(1)
 tf.set_random_seed(1)
@@ -131,7 +134,7 @@ class DuelingDQN:
     def learn(self):
         if self.learn_step_counter % self.replace_target_iter == 0:
             self.sess.run(self.replace_target_op)
-            print('\ntarget_params_replaced\n')
+            #print('\ntarget_params_replaced\n')
 
         sample_index = np.random.choice(self.memory_size, size=self.batch_size)
         batch_memory = self.memory[sample_index, :]
