@@ -24,7 +24,7 @@ GAMMA = 0.9     # reward discount in TD error
 LR_A = 0.001    # learning rate for actor
 LR_C = 0.01     # learning rate for critic
 
-env = gym.make('CartPole-v1', render_mode="human")
+env = gym.make('CartPole-v1')#, render_mode="human")
 #env.seed(1)  # reproducible
 env = env.unwrapped
 
@@ -160,7 +160,7 @@ for i_episode in range(MAX_EPISODE):
                 running_reward = ep_rs_sum
             else:
                 running_reward = running_reward * 0.95 + ep_rs_sum * 0.05
-            if running_reward > DISPLAY_REWARD_THRESHOLD: RENDER = True  # rendering
+            #if running_reward > DISPLAY_REWARD_THRESHOLD: RENDER = True  # rendering
             print("episode:", i_episode, "  reward:", int(running_reward))
             break
 
