@@ -134,28 +134,22 @@ if OUTPUT_GRAPH:
 
 for i_episode in range(MAX_EPISODE):
     s, info = env.reset(seed=42)
-    t = 0
+    step_count = 0
     track_r = []
     while True:
         if RENDER: env.render()
-
         a = actor.choose_action(s)
-
         s_, r, done, truncated, info = env.step(a)
-
         if done: r = -20
-
         track_r.append(r)
 
         td_error = critic.learn(s, r, s_)  # gradient = grad[r + gamma * V(s_) - V(s)]
         actor.learn(s, a, td_error)     # true_gradient = grad[logPi(s,a) * td_error]
 
         s = s_
-        t += 1
-
-        if done or t >= MAX_EP_STEPS:
+        step_count += 1
+        if done or step_count >= MAX_EP_STEPS:
             ep_rs_sum = sum(track_r)
-
             if 'running_reward' not in globals():
                 running_reward = ep_rs_sum
             else:
@@ -163,4 +157,4 @@ for i_episode in range(MAX_EPISODE):
             #if running_reward > DISPLAY_REWARD_THRESHOLD: RENDER = True  # rendering
             print("episode:", i_episode, "  reward:", int(running_reward))
             break
-
+    if step_count >= MAX_EP_STEPS: break
