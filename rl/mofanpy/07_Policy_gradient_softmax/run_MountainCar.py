@@ -36,11 +36,17 @@ RL = PolicyGradient(
 
 for i_episode in range(1000):
     observation, info = env.reset(seed=42)
+    step_count = 0
+    car_left = 0
     while True:
         if RENDER: env.render()
         action = RL.choose_action(observation)
+        if observation[0] < -0.9: car_left = 1
+        #if car_left: action = 2
         observation_, reward, done, truncated, info = env.step(action)     # reward = -1 in all cases
+        #print('reward, done, truncated, info', reward, done, truncated, info, i_episode, step_count, observation, car_left)
         RL.store_transition(observation, action, reward)
+        step_count += 1
 
         if done:
             ep_rs_sum = sum(RL.ep_rs)
