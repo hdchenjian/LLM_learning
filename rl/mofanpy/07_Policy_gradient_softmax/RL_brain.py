@@ -44,23 +44,23 @@ class PolicyGradient:
             self.tf_acts = tf.placeholder(tf.int32, [None, ], name="actions_num")
             self.tf_vt = tf.placeholder(tf.float32, [None, ], name="actions_value")
         # fc1
-        layer = tf.layers.dense(
-            inputs=self.tf_obs,
+        layer = tf.keras.layers.Dense(
+            #inputs=self.tf_obs,
             units=10,
             activation=tf.nn.tanh,  # tanh activation
             kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
             bias_initializer=tf.constant_initializer(0.1),
             name='fc1'
-        )
+        )(self.tf_obs)
         # fc2
-        all_act = tf.layers.dense(
-            inputs=layer,
+        all_act = tf.keras.layers.Dense(
+            #inputs=layer,
             units=self.n_actions,
             activation=None,
             kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
             bias_initializer=tf.constant_initializer(0.1),
             name='fc2'
-        )
+        )(layer)
 
         self.all_act_prob = tf.nn.softmax(all_act, name='act_prob')  # use softmax to convert to probability
 
