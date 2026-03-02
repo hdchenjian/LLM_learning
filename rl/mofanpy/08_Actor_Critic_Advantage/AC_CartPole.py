@@ -41,23 +41,23 @@ class Actor(object):
         self.td_error = tf.placeholder(tf.float32, None, "td_error")  # TD_error
 
         with tf.variable_scope('Actor'):
-            l1 = tf.layers.dense(
-                inputs=self.s,
+            l1 = tf.keras.layers.Dense(
+                #inputs=self.s,
                 units=20,    # number of hidden units
                 activation=tf.nn.relu,
                 kernel_initializer=tf.random_normal_initializer(0., .1),    # weights
                 bias_initializer=tf.constant_initializer(0.1),  # biases
                 name='l1'
-            )
+            )(self.s)
 
-            self.acts_prob = tf.layers.dense(
-                inputs=l1,
+            self.acts_prob = tf.keras.layers.Dense(
+                #inputs=l1,
                 units=n_actions,    # output units
                 activation=tf.nn.softmax,   # get action probabilities
                 kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
                 bias_initializer=tf.constant_initializer(0.1),  # biases
                 name='acts_prob'
-            )
+            )(l1)
 
         with tf.variable_scope('exp_v'):
             log_prob = tf.log(self.acts_prob[0, self.a])
@@ -87,8 +87,8 @@ class Critic(object):
         self.r = tf.placeholder(tf.float32, None, 'r')
 
         with tf.variable_scope('Critic'):
-            l1 = tf.layers.dense(
-                inputs=self.s,
+            l1 = tf.keras.layers.Dense(
+                #inputs=self.s,
                 units=20,  # number of hidden units
                 activation=tf.nn.relu,  # None
                 # have to be linear to make sure the convergence of actor.
@@ -96,16 +96,16 @@ class Critic(object):
                 kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
                 bias_initializer=tf.constant_initializer(0.1),  # biases
                 name='l1'
-            )
+            )(self.s)
 
-            self.v = tf.layers.dense(
-                inputs=l1,
+            self.v = tf.keras.layers.Dense(
+                #inputs=l1,
                 units=1,  # output units
                 activation=None,
                 kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
                 bias_initializer=tf.constant_initializer(0.1),  # biases
                 name='V'
-            )
+            )(l1)
 
         with tf.variable_scope('squared_TD_error'):
             self.td_error = self.r + GAMMA * self.v_ - self.v
