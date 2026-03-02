@@ -66,6 +66,9 @@ class Actor(object):
         with tf.variable_scope('train'):
             self.train_op = tf.train.AdamOptimizer(lr).minimize(-self.exp_v)  # minimize(-exp_v) = maximize(exp_v)
 
+    def save(self):
+        tf.saved_model.simple_save(self.sess, 'actor', inputs={"state": self.s}, outputs={"acts_prob": self.acts_prob})
+
     def learn(self, s, a, td):
         s = s[np.newaxis, :]
         feed_dict = {self.s: s, self.a: a, self.td_error: td}
@@ -158,3 +161,5 @@ for i_episode in range(MAX_EPISODE):
             print("episode:", i_episode, "  reward:", int(running_reward))
             break
     if step_count >= MAX_EP_STEPS: break
+
+#actor.save()
