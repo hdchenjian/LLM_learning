@@ -33,7 +33,6 @@ METHOD = [
     dict(name='clip', epsilon=0.2),                 # Clipped surrogate objective, find this is better
 ][1]        # choose the method for optimization
 
-
 class PPO(object):
 
     def __init__(self):
