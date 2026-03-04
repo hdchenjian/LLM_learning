@@ -7,10 +7,8 @@ import torch.multiprocessing as mp
 from shared_adam import SharedAdam
 
 os.environ["OMP_NUM_THREADS"] = "1"
-
 UPDATE_GLOBAL_ITER = 5
 GAMMA = 0.9
-MAX_EP = 3000
 
 env = gym.make('CartPole-v1')#, render_mode="human")
 N_S = env.observation_space.shape[0]
@@ -28,16 +26,18 @@ class Net(nn.Module):
         set_init([self.pi1, self.pi2, self.v1, self.v2])
         self.distribution = torch.distributions.Categorical
 
-    def forward(self, x):
+    def forward(self, x, action_only=False):
         pi1 = torch.tanh(self.pi1(x))
         logits = self.pi2(pi1)
+        if action_only:
+            return logits, None
         v1 = torch.tanh(self.v1(x))
         values = self.v2(v1)
         return logits, values
 
     def choose_action(self, s):
         self.eval()
-        logits, _ = self.forward(s)
+        logits, _ = self.forward(s, action_only=True)
         prob = F.softmax(logits, dim=1).data
         m = self.distribution(prob)
         return m.sample().numpy()[0]
@@ -50,6 +50,7 @@ class Net(nn.Module):
         
         probs = F.softmax(logits, dim=1)
         m = self.distribution(probs)
+        #import pdb; pdb.set_trace()
         exp_v = m.log_prob(a) * td.detach().squeeze()
         a_loss = -exp_v
         total_loss = (c_loss + a_loss).mean()
@@ -71,7 +72,7 @@ class Worker(mp.Process):
 
     def run(self):
         total_step = 1
-        while self.g_ep.value < MAX_EP:
+        while self.g_ep.value < 3000:
             s, info = self.env.reset()
             buffer_s, buffer_a, buffer_r = [], [], []
             ep_r = 0.
@@ -79,7 +80,7 @@ class Worker(mp.Process):
                 #self.env.render()
                 a = self.lnet.choose_action(v_wrap(s[None, :]))
                 s_, r, done, truncated, info = self.env.step(a)
-                if done: r = -1
+                if done: r = -20
                 ep_r += r
                 buffer_a.append(a)
                 buffer_s.append(s)
