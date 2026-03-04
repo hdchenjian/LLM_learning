@@ -155,11 +155,7 @@ for ep in range(EP_MAX):
             ppo.update(bs, ba, br)
     if ep == 0: all_ep_r.append(ep_r)
     else: all_ep_r.append(all_ep_r[-1]*0.9 + ep_r*0.1)
-    print(
-        'Ep: %i' % ep,
-        "|Ep_r: %i" % ep_r,
-        ("|Lam: %.4f" % METHOD['lam']) if METHOD['name'] == 'kl_pen' else '',
-    )
+    print('Ep: %i' % ep, "|Ep_r: %i" % ep_r, ("|Lam: %.4f" % METHOD['lam']) if METHOD['name'] == 'kl_pen' else '',)
 
 plt.plot(np.arange(len(all_ep_r)), all_ep_r)
 plt.xlabel('Episode');plt.ylabel('Moving averaged episode reward');plt.show()
