@@ -20,6 +20,7 @@ def show_tfidf(tfidf, vocab, filename):
 
 
 def show_w2v_word_embedding(model, data: utils.Dataset, path):
+    #os.makedirs("./visual/results", exist_ok=True)
     word_emb = model.embeddings.get_weights()[0]
     for i in range(data.num_word):
         c = "blue"
@@ -34,7 +35,7 @@ def show_w2v_word_embedding(model, data: utils.Dataset, path):
     plt.yticks(())
     plt.xlabel("embedding dim1")
     plt.ylabel("embedding dim2")
-    plt.savefig(path, dpi=300, format="png")
+    #plt.savefig(path, dpi=300, format="png")
     plt.show()
 
 

@@ -1,4 +1,11 @@
 # [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/pdf/1301.3781.pdf)
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+import warnings
+warnings.filterwarnings('ignore',category=UserWarning)
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+#tf.get_logger().setLevel('ERROR')
+
 import tensorflow as tf
 from tensorflow import keras
 from utils import process_w2v_data      # this refers to utils.py in my [repo](https://github.com/MorvanZhou/NLP-Tutorials/)
@@ -57,7 +64,7 @@ class SkipGram(keras.Model):
 
     # negative sampling: take one positive label and num_sampled negative labels to compute the loss
     # in order to reduce the computation of full softmax
-    def loss(self, x, y, training=None):
+    def loss_(self, x, y, training=None):
         embedded = self.call(x, training)
         return tf.reduce_mean(
             tf.nn.nce_loss(
@@ -66,7 +73,7 @@ class SkipGram(keras.Model):
 
     def step(self, x, y):
         with tf.GradientTape() as tape:
-            loss = self.loss(x, y, True)
+            loss = self.loss_(x, y, True)
             grads = tape.gradient(loss, self.trainable_variables)
         self.opt.apply_gradients(zip(grads, self.trainable_variables))
         return loss.numpy()
