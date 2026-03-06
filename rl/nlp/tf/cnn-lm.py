@@ -35,6 +35,7 @@ class CNNTranslation(nn.Module):
     
     def encode(self,x):
         embedded = self.enc_embeddings(x)                   # [n, step, emb]
+        #import pdb; pdb.set_trace()
         o = torch.unsqueeze(embedded,1)                     # [n, 1, step=8, emb=16]
         co = [relu(conv2d(o)) for conv2d in self.conv2ds]   # [n, 16, 7, 1], [n, 16, 6, 1], [n, 16, 5, 1]
         co = [self.max_pools[i](co[i]) for i in range(len(co))]         # [n, 16, 1, 1] * 3
