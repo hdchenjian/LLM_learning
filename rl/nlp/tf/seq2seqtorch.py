@@ -1,7 +1,7 @@
 from torch import nn
 import torch
 import numpy as np
-import utils
+from utils import DateData
 from torch.utils.data import DataLoader
 from torch.nn.functional import cross_entropy,softmax
 
@@ -17,7 +17,6 @@ class Seq2Seq(nn.Module):
         self.enc_embeddings.weight.data.normal_(0,0.1)
         self.encoder = nn.LSTM(emb_dim,units,1,batch_first=True)
     
-
         # decoder
         self.dec_embeddings = nn.Embedding(dec_v_dim,emb_dim)
         self.dec_embeddings.weight.data.normal_(0,0.1)
@@ -29,8 +28,8 @@ class Seq2Seq(nn.Module):
         self.start_token = start_token
         self.end_token = end_token
 
-    
     def encode(self,x):
+        #import pdb; pdb.set_trace()
         embedded = self.enc_embeddings(x)   # [n, step, emb]
         hidden = (torch.zeros(1,x.shape[0],self.units),torch.zeros(1,x.shape[0],self.units))
         o,(h,c) = self.encoder(embedded,hidden)
@@ -84,11 +83,12 @@ class Seq2Seq(nn.Module):
         return loss.detach().numpy()
 
 def train():
-    dataset = utils.DateData(4000)
+    dataset = DateData(4000)
     print("Chinese time order: yy/mm/dd ",dataset.date_cn[:3],"\nEnglish time order: dd/M/yyyy", dataset.date_en[:3])
-    print("Vocabularies: ", dataset.vocab)
-    print(f"x index sample:  \n{dataset.idx2str(dataset.x[0])}\n{dataset.x[0]}",
-    f"\ny index sample:  \n{dataset.idx2str(dataset.y[0])}\n{dataset.y[0]}")
+    for i in range(len(dataset.vocab)):
+        print(i, dataset.i2v[i], end=', ')
+    print(f"\nx index sample:  \n{dataset.idx2str(dataset.x[0])}\n{dataset.x[0]}",
+          f"\ny index sample:  \n{dataset.idx2str(dataset.y[0])}\n{dataset.y[0]}")
     loader = DataLoader(dataset,batch_size=32,shuffle=True)
     model = Seq2Seq(dataset.num_word,dataset.num_word,emb_dim=16,units=32,max_pred_len=11,start_token=dataset.start_token,end_token=dataset.end_token)
     for i in range(100):
@@ -96,20 +96,14 @@ def train():
             bx, by, decoder_len = batch
             bx = bx.type(torch.LongTensor)
             by = by.type(torch.LongTensor)
+            #import pdb; pdb.set_trace()
             loss = model.step(bx,by)
             if batch_idx % 70 == 0:
                 target = dataset.idx2str(by[0, 1:-1].data.numpy())
                 pred = model.inference(bx[0:1])
                 res = dataset.idx2str(pred[0].data.numpy())
                 src = dataset.idx2str(bx[0].data.numpy())
-                print(
-                    "Epoch: ",i,
-                    "| t: ", batch_idx,
-                    "| loss: %.3f" % loss,
-                    "| input: ", src,
-                    "| target: ", target,
-                    "| inference: ", res,
-                )
+                print("Epoch: ",i, "| t: ", batch_idx, "| loss: %.3f" % loss, "| input: ", src, "| target: ", target, "| inference: ", res,)
 
 
 if __name__ == "__main__":

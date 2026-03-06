@@ -54,6 +54,11 @@ class DateData:
     def num_word(self):
         return len(self.vocab)
 
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, index):
+        return self.x[index],self.y[index], len(self.y[index])-1
 
 def pad_zero(seqs, max_len):
     padded = np.full((len(seqs), max_len), fill_value=PAD_ID, dtype=np.long)
