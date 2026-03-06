@@ -78,7 +78,7 @@ class Seq2Seq(nn.Module):
             # hs is the output from encoder
             # ht is the previous hidden state from decoder
             # self.attn(o): [n, step, units]
-            attn_prod = torch.matmul(self.attn(hx.unsqueeze(1)),encode_out.permute(0,2,1))  / math.sqrt(self.units) # [n, 1, step]
+            attn_prod = torch.matmul(self.attn(hx.unsqueeze(1)),encode_out.permute(0,2,1))  #/ math.sqrt(self.units) # [n, 1, step]
             att_weight = softmax(attn_prod, dim=2)  # [n, 1, step]
             context = torch.matmul(att_weight, encode_out)    # [n, 1, units]
             # attn_prod = torch.matmul(self.attn(o),hx.unsqueeze(2))  # [n, step, 1]
