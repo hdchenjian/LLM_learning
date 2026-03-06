@@ -18,6 +18,7 @@ class Seq2Seq(nn.Module):
 
         # decoder
         self.dec_embeddings = nn.Embedding(dec_v_dim,emb_dim)
+        self.dec_embeddings.weight.data.normal_(0, 0.1)
         self.attn = nn.Linear(units,units)
         self.decoder_cell = nn.LSTMCell(emb_dim,units)
         self.decoder_dense = nn.Linear(units*2,dec_v_dim)
@@ -35,7 +36,7 @@ class Seq2Seq(nn.Module):
 
     def inference(self,x,return_align=False):
         self.eval()
-        o,hx,cx = self.encode(x)    # [n, step, units], [num_layers * num_directions, n, units] * 2
+        encode_out,hx,cx = self.encode(x)    # [n, step, units], [num_layers * num_directions, n, units] * 2
         hx,cx = hx[0],cx[0]         # [n, units]
         start = torch.ones(x.shape[0],1)    # [n, 1]
         start[:,0] = torch.tensor(self.start_token)
@@ -45,12 +46,12 @@ class Seq2Seq(nn.Module):
         dec_in = dec_emb_in[0]                  # [n, emb_dim]
         output = []
         for i in range(self.max_pred_len):
-            attn_prod = torch.matmul(self.attn(hx.unsqueeze(1)),o.permute(0,2,1)) # [n, 1, step]
+            attn_prod = torch.matmul(self.attn(hx.unsqueeze(1)),encode_out.permute(0,2,1)) # [n, 1, step]
             att_weight = softmax(attn_prod, dim=2)  # [n, 1, step]
-            context = torch.matmul(att_weight,o)    # [n, 1, units]
+            context = torch.matmul(att_weight,encode_out)    # [n, 1, units]
             # attn_prod = torch.matmul(self.attn(o),hx.unsqueeze(2))  # [n, step, 1]
             # attn_weight = softmax(attn_prod,dim=1)                  # [n, step, 1]
-            # context = torch.matmul(o.permute(0,2,1),attn_weight)    # [n, units, 1]
+            # context = torch.matmul(encode_out.permute(0,2,1),attn_weight)    # [n, units, 1]
             hx, cx = self.decoder_cell(dec_in, (hx, cx))
             hc = torch.cat([context.squeeze(1),hx],dim=1)           # [n, units *2]
             # hc = torch.cat([context.squeeze(2),hx],dim=1)           # [n, units *2]
@@ -64,24 +65,25 @@ class Seq2Seq(nn.Module):
         return output.permute(1,0,2).view(-1,self.max_pred_len)
 
     def train_logit(self,x,y):
-        o,hx,cx = self.encode(x)    # [n, step, units], [num_layers * num_directions, n, units] * 2
+        encode_out, hx, cx = self.encode(x)    # [n, step, units], [num_layers * num_directions, n, units] * 2
         hx,cx = hx[0],cx[0]         # [n, units]
         dec_in = y[:,:-1]           # [n, step]
         dec_emb_in = self.dec_embeddings(dec_in)    # [n, step, emb_dim]
         dec_emb_in = dec_emb_in.permute(1,0,2)      # [step, n, emb_dim]
         output = []
+        #import pdb; pdb.set_trace()
         for i in range(dec_emb_in.shape[0]):
             # General Attention:
             # score(ht,hs) = (ht^T)(Wa)hs
             # hs is the output from encoder
             # ht is the previous hidden state from decoder
             # self.attn(o): [n, step, units]
-            attn_prod = torch.matmul(self.attn(hx.unsqueeze(1)),o.permute(0,2,1)) # [n, 1, step]
+            attn_prod = torch.matmul(self.attn(hx.unsqueeze(1)),encode_out.permute(0,2,1)) # [n, 1, step]
             att_weight = softmax(attn_prod, dim=2)  # [n, 1, step]
-            context = torch.matmul(att_weight,o)    # [n, 1, units]
+            context = torch.matmul(att_weight, encode_out)    # [n, 1, units]
             # attn_prod = torch.matmul(self.attn(o),hx.unsqueeze(2))  # [n, step, 1]
             # attn_weight = softmax(attn_prod,dim=1)                  # [n, step, 1]
-            # context = torch.matmul(o.permute(0,2,1),attn_weight)    # [n, units, 1]
+            # context = torch.matmul(encode_out.permute(0,2,1),attn_weight)    # [n, units, 1]
             hx, cx = self.decoder_cell(dec_emb_in[i], (hx, cx))     # [n, units]
             hc = torch.cat([context.squeeze(1),hx],dim=1)           # [n, units *2]
             # hc = torch.cat([context.squeeze(2),hx],dim=1)           # [n, units *2]
