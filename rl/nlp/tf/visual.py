@@ -49,7 +49,8 @@ def seq2seq_attention():
         plt.subplot(2, 3, i + 1)
         x_vocab = [i2v[j] for j in np.ravel(x[i])]
         y_vocab = [i2v[j] for j in y[i, 1:]]
-        plt.imshow(align[i], cmap="YlGn", vmin=0., vmax=1.)
+        print('align[i]', align[i].shape, type(align[i]), len(x_vocab), len(y_vocab))
+        plt.imshow(align[i].numpy(), cmap="YlGn", vmin=0., vmax=1.)
         plt.yticks([j for j in range(len(y_vocab))], y_vocab)
         plt.xticks([j for j in range(len(x_vocab))], x_vocab)
         if i == 0 or i == 3:
@@ -58,6 +59,7 @@ def seq2seq_attention():
             plt.xlabel("Input")
     plt.tight_layout()
     plt.savefig("./visual/results/seq2seq_attention.png", format="png", dpi=200)
+    plt.colorbar()
     plt.show()
 
 
@@ -290,10 +292,11 @@ def self_attention_line(bert_or_gpt="bert", case=0):
 if __name__ == "__main__":
     os.makedirs("./visual/results", exist_ok=True)
     # all_mask_kinds()
-    # seq2seq_attention()
+    seq2seq_attention()
+
     # position_embedding()
-    transformer_attention_matrix(case=0)
-    transformer_attention_line(case=0)
+    #transformer_attention_matrix(case=0)
+    #transformer_attention_line(case=0)
 
     # model = ["gpt", "bert", "bert_window_mask"][1]
     # case = 6

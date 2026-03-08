@@ -1,271 +1,273 @@
-# [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf)
-import tensorflow as tf
-from tensorflow import keras
-import numpy as np
-import utils    # this refers to utils.py in my [repo](https://github.com/MorvanZhou/NLP-Tutorials/)
-import time
-import pickle
 import os
+os.environ["OMP_NUM_THREADS"] = "1"
+import torch.nn as nn
+from torch.nn.functional import cross_entropy,softmax, relu
+import numpy as np
+import torch
+from torch.utils import data
+import utils
+from torch.utils.data import DataLoader
+import argparse
 
-MODEL_DIM = 32
-MAX_LEN = 12
-N_LAYER = 3
-N_HEAD = 4
-DROP_RATE = 0.1
+MAX_LEN = 11
 
-
-class MultiHead(keras.layers.Layer):
+class MultiHead(nn.Module):
     def __init__(self, n_head, model_dim, drop_rate):
         super().__init__()
         self.head_dim = model_dim // n_head
         self.n_head = n_head
         self.model_dim = model_dim
-        self.wq = keras.layers.Dense(n_head * self.head_dim)
-        self.wk = keras.layers.Dense(n_head * self.head_dim)
-        self.wv = keras.layers.Dense(n_head * self.head_dim)      # [n, step, h*h_dim]
+        self.wq = nn.Linear(model_dim, n_head * self.head_dim)
+        self.wk = nn.Linear(model_dim, n_head * self.head_dim)
+        self.wv = nn.Linear(model_dim, n_head * self.head_dim)
 
-        self.o_dense = keras.layers.Dense(model_dim)
-        self.o_drop = keras.layers.Dropout(rate=drop_rate)
+        self.o_dense = nn.Linear(model_dim, model_dim)
+        self.o_drop = nn.Dropout(drop_rate)
+        self.layer_norm = nn.LayerNorm(model_dim)
         self.attention = None
 
-    def call(self, q, k, v, mask, training):
-        _q = self.wq(q)      # [n, q_step, h*h_dim]
-        _k, _v = self.wk(k), self.wv(v)     # [n, step, h*h_dim]
-        _q = self.split_heads(_q)  # [n, h, q_step, h_dim]
-        _k, _v = self.split_heads(_k), self.split_heads(_v)  # [n, h, step, h_dim]
-        context = self.scaled_dot_product_attention(_q, _k, _v, mask)     # [n, q_step, h*dv]
-        o = self.o_dense(context)       # [n, step, dim]
-        o = self.o_drop(o, training=training)
+    def forward(self,q,k,v,mask,training):
+        # residual connect
+        residual = q
+        dim_per_head= self.head_dim
+        num_heads = self.n_head
+        batch_size = q.size(0)
+
+        # linear projection
+        key = self.wk(k)    # [n, step, num_heads * head_dim]
+        value = self.wv(v)  # [n, step, num_heads * head_dim]
+        query = self.wq(q)  # [n, step, num_heads * head_dim]
+
+        # split by head
+        query = self.split_heads(query)       # [n, n_head, q_step, h_dim]
+        key = self.split_heads(key)
+        value = self.split_heads(value)  # [n, h, step, h_dim]
+        context = self.scaled_dot_product_attention(query,key, value, mask)    # [n, q_step, h*dv]
+        o = self.o_dense(context)   # [n, step, dim]
+        o = self.o_drop(o)
+
+        o = self.layer_norm(residual+o)
         return o
 
     def split_heads(self, x):
-        x = tf.reshape(x, (x.shape[0], x.shape[1], self.n_head, self.head_dim))  # [n, step, h, h_dim]
-        return tf.transpose(x, perm=[0, 2, 1, 3])       # [n, h, step, h_dim]
+        x = torch.reshape(x,(x.shape[0], x.shape[1], self.n_head, self.head_dim))
+        return x.permute(0,2,1,3)
 
     def scaled_dot_product_attention(self, q, k, v, mask=None):
-        dk = tf.cast(k.shape[-1], dtype=tf.float32)
-        score = tf.matmul(q, k, transpose_b=True) / (tf.math.sqrt(dk) + 1e-8)  # [n, h_dim, q_step, step]
+        dk = torch.tensor(k.shape[-1]).type(torch.float)
+        score = torch.matmul(q,k.permute(0,1,3,2)) / (torch.sqrt(dk) + 1e-8)    # [n, n_head, step, step]
         if mask is not None:
-            score += mask * -1e9
-        self.attention = tf.nn.softmax(score, axis=-1)                               # [n, h, q_step, step]
-        context = tf.matmul(self.attention, v)         # [n, h, q_step, step] @ [n, h, step, dv] = [n, h, q_step, dv]
-        context = tf.transpose(context, perm=[0, 2, 1, 3])   # [n, q_step, h, dv]
-        context = tf.reshape(context, (context.shape[0], context.shape[1], -1))     # [n, q_step, h*dv]
-        return context
+            # change the value at masked position to negative infinity,
+            # so the attention score at these positions after softmax will close to 0.
+            score = score.masked_fill_(mask,-np.inf)
+        self.attention = softmax(score,dim=-1)
+        context = torch.matmul(self.attention,v)    # [n, num_head, step, head_dim]
+        context = context.permute(0,2,1,3)          # [n, step, num_head, head_dim]
+        context = context.reshape((context.shape[0], context.shape[1],-1))
+        return context  # [n, step, model_dim]
 
-
-class PositionWiseFFN(keras.layers.Layer):
-    def __init__(self, model_dim):
+class PositionWiseFFN(nn.Module):
+    def __init__(self,model_dim, dropout = 0.0):
         super().__init__()
-        dff = model_dim * 4
-        self.l = keras.layers.Dense(dff, activation=keras.activations.relu)
-        self.o = keras.layers.Dense(model_dim)
+        dff = model_dim*4
+        self.l = nn.Linear(model_dim,dff)
+        self.o = nn.Linear(dff,model_dim)
+        self.dropout = nn.Dropout(dropout)
+        self.layer_norm = nn.LayerNorm(model_dim)
 
-    def call(self, x):
-        o = self.l(x)
+    def forward(self,x):
+        o = relu(self.l(x))
         o = self.o(o)
-        return o         # [n, step, dim]
+        o = self.dropout(o)
+
+        o = self.layer_norm(x + o)
+        return o    # [n, step, dim]
 
 
-class EncodeLayer(keras.layers.Layer):
-    def __init__(self, n_head, model_dim, drop_rate):
+
+class EncoderLayer(nn.Module):
+
+    def __init__(self, n_head, emb_dim, drop_rate):
         super().__init__()
-        self.ln = [keras.layers.LayerNormalization(axis=-1) for _ in range(2)]  # only norm z-dim
-        self.mh = MultiHead(n_head, model_dim, drop_rate)
-        self.ffn = PositionWiseFFN(model_dim)
-        self.drop = keras.layers.Dropout(drop_rate)
+        self.mh = MultiHead(n_head, emb_dim, drop_rate)
+        self.ffn = PositionWiseFFN(emb_dim,drop_rate)
 
-    def call(self, xz, training, mask):
-        attn = self.mh.call(xz, xz, xz, mask, training)       # [n, step, dim]
-        o1 = self.ln[0](attn + xz)
-        ffn = self.drop(self.ffn.call(o1), training)
-        o = self.ln[1](ffn + o1)         # [n, step, dim]
+    def forward(self, xz, training, mask):
+        # xz: [n, step, emb_dim]
+        context = self.mh(xz, xz, xz, mask, training)  # [n, step, emb_dim]
+        o = self.ffn(context)
         return o
 
+class Encoder(nn.Module):
+    def __init__(self, n_head, emb_dim, drop_rate, n_layer):
+        super().__init__()
+        self.encoder_layers = nn.ModuleList(
+            [EncoderLayer(n_head, emb_dim, drop_rate) for _ in range(n_layer)]
+        )
+    def forward(self, xz, training, mask):
 
-class Encoder(keras.layers.Layer):
+        for encoder in self.encoder_layers:
+            xz = encoder(xz,training,mask)
+        return xz       # [n, step, emb_dim]
+
+class DecoderLayer(nn.Module):
+    def __init__(self,n_head,model_dim,drop_rate):
+        super().__init__()
+        self.mh = nn.ModuleList([MultiHead(n_head, model_dim, drop_rate) for _ in range(2)])
+        self.ffn = PositionWiseFFN(model_dim,drop_rate)
+
+    def forward(self,yz, xz, training, yz_look_ahead_mask,xz_pad_mask):
+        dec_output = self.mh[0](yz, yz, yz, yz_look_ahead_mask, training)   # [n, step, model_dim]
+
+        dec_output = self.mh[1](dec_output, xz, xz, xz_pad_mask, training)  # [n, step, model_dim]
+
+        dec_output = self.ffn(dec_output)   # [n, step, model_dim]
+
+        return dec_output
+
+class Decoder(nn.Module):
     def __init__(self, n_head, model_dim, drop_rate, n_layer):
         super().__init__()
-        self.ls = [EncodeLayer(n_head, model_dim, drop_rate) for _ in range(n_layer)]
 
-    def call(self, xz, training, mask):
-        for l in self.ls:
-            xz = l.call(xz, training, mask)
-        return xz       # [n, step, dim]
+        self.num_layers = n_layer
 
-
-class DecoderLayer(keras.layers.Layer):
-    def __init__(self, n_head, model_dim, drop_rate):
-        super().__init__()
-        self.ln = [keras.layers.LayerNormalization(axis=-1) for _ in range(3)] # only norm z-dim
-        self.drop = keras.layers.Dropout(drop_rate)
-        self.mh = [MultiHead(n_head, model_dim, drop_rate) for _ in range(2)]
-        self.ffn = PositionWiseFFN(model_dim)
-
-    def call(self, yz, xz, training, yz_look_ahead_mask, xz_pad_mask):
-        attn = self.mh[0].call(yz, yz, yz, yz_look_ahead_mask, training)       # decoder self attention
-        o1 = self.ln[0](attn + yz)
-        attn = self.mh[1].call(o1, xz, xz, xz_pad_mask, training)       # decoder + encoder attention
-        o2 = self.ln[1](attn + o1)
-        ffn = self.drop(self.ffn.call(o2), training)
-        o = self.ln[2](ffn + o2)
-        return o
-
-
-class Decoder(keras.layers.Layer):
-    def __init__(self, n_head, model_dim, drop_rate, n_layer):
-        super().__init__()
-        self.ls = [DecoderLayer(n_head, model_dim, drop_rate) for _ in range(n_layer)]
-
-    def call(self, yz, xz, training, yz_look_ahead_mask, xz_pad_mask):
-        for l in self.ls:
-            yz = l.call(yz, xz, training, yz_look_ahead_mask, xz_pad_mask)
-        return yz
-
-
-class PositionEmbedding(keras.layers.Layer):
-    def __init__(self, max_len, model_dim, n_vocab):
-        super().__init__()
-        pos = np.arange(max_len)[:, None]
-        pe = pos / np.power(10000, 2. * np.arange(model_dim)[None, :] / model_dim)  # [max_len, dim]
-        pe[:, 0::2] = np.sin(pe[:, 0::2])
-        pe[:, 1::2] = np.cos(pe[:, 1::2])
-        pe = pe[None, :, :]  # [1, max_len, model_dim]    for batch adding
-        self.pe = tf.constant(pe, dtype=tf.float32)
-        self.embeddings = keras.layers.Embedding(
-            input_dim=n_vocab, output_dim=model_dim,  # [n_vocab, dim]
-            embeddings_initializer=tf.initializers.RandomNormal(0., 0.01),
+        self.decoder_layers = nn.ModuleList(
+            [DecoderLayer(n_head, model_dim, drop_rate) for _ in range(n_layer)]
         )
 
-    def call(self, x):
-        x_embed = self.embeddings(x) + self.pe  # [n, step, dim]
-        return x_embed
+    def forward(self, yz, xz, training, yz_look_ahead_mask, xz_pad_mask):
+        for decoder in self.decoder_layers:
+            yz = decoder(yz, xz, training, yz_look_ahead_mask, xz_pad_mask)
+        return yz   # [n, step, model_dim]
 
+class PositionEmbedding(nn.Module):
+    def __init__(self, max_len, emb_dim, n_vocab):
+        super().__init__()
+        pos = np.expand_dims(np.arange(max_len),1)  # [max_len, 1]
+        pe = pos / np.power(1000, 2*np.expand_dims(np.arange(emb_dim)//2,0)/emb_dim)  # [max_len, emb_dim]
+        pe[:, 0::2] = np.sin(pe[:, 0::2])
+        pe[:, 1::2] = np.cos(pe[:, 1::2])
+        pe = np.expand_dims(pe,0) # [1, max_len, emb_dim]
+        self.pe = torch.from_numpy(pe).type(torch.float32)
+        self.embeddings = nn.Embedding(n_vocab,emb_dim)
+        self.embeddings.weight.data.normal_(0,0.1)
 
-class Transformer(keras.Model):
-    def __init__(self, model_dim, max_len, n_layer, n_head, n_vocab, drop_rate=0.1, padding_idx=0):
+    def forward(self, x):
+        device = self.embeddings.weight.device
+        self.pe = self.pe.to(device)
+        x_embed = self.embeddings(x) + self.pe  # [n, step, emb_dim]
+        return x_embed  # [n, step, emb_dim]
+
+class Transformer(nn.Module):
+    def __init__(self, n_vocab, max_len, n_layer = 6, emb_dim=512, n_head = 8, drop_rate=0.1, padding_idx=0):
         super().__init__()
         self.max_len = max_len
-        self.padding_idx = padding_idx
+        self.padding_idx = torch.tensor(padding_idx)
+        self.dec_v_emb = n_vocab
 
-        self.embed = PositionEmbedding(max_len, model_dim, n_vocab)
-        self.encoder = Encoder(n_head, model_dim, drop_rate, n_layer)
-        self.decoder = Decoder(n_head, model_dim, drop_rate, n_layer)
-        self.o = keras.layers.Dense(n_vocab)
+        self.embed = PositionEmbedding(max_len, emb_dim, n_vocab)
+        self.encoder = Encoder(n_head, emb_dim, drop_rate, n_layer)
+        self.decoder = Decoder(n_head, emb_dim, drop_rate, n_layer)
+        self.o = nn.Linear(emb_dim,n_vocab)
+        self.opt = torch.optim.Adam(self.parameters(),lr=0.002)
 
-        self.cross_entropy = keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction="none")
-        self.opt = keras.optimizers.Adam(0.002)
-
-    def call(self, x, y, training=None):
-        x_embed, y_embed = self.embed(x), self.embed(y)
-        pad_mask = self._pad_mask(x)
-        encoded_z = self.encoder.call(x_embed, training, mask=pad_mask)
-        decoded_z = self.decoder.call(
-            y_embed, encoded_z, training, yz_look_ahead_mask=self._look_ahead_mask(y), xz_pad_mask=pad_mask)
-        o = self.o(decoded_z)
+    def forward(self,x,y,training= None):
+        x_embed, y_embed = self.embed(x), self.embed(y) # [n, step, emb_dim] * 2
+        pad_mask = self._pad_mask(x)    # [n, 1, step, step]
+        encoded_z = self.encoder(x_embed,training,pad_mask) # [n, step, emb_dim]
+        yz_look_ahead_mask = self._look_ahead_mask(y)   # [n, 1, step, step]
+        decoded_z = self.decoder(y_embed,encoded_z, training, yz_look_ahead_mask, pad_mask) # [n, step, emb_dim]
+        o = self.o(decoded_z)   # [n, step, n_vocab]
         return o
 
     def step(self, x, y):
-        with tf.GradientTape() as tape:
-            logits = self.call(x, y[:, :-1], training=True)
-            pad_mask = tf.math.not_equal(y[:, 1:], self.padding_idx)
-            loss = tf.reduce_mean(tf.boolean_mask(self.cross_entropy(y[:, 1:], logits), pad_mask))
-        grads = tape.gradient(loss, self.trainable_variables)
-        self.opt.apply_gradients(zip(grads, self.trainable_variables))
-        return loss, logits
+        self.opt.zero_grad()
+        logits = self(x,y[:, :-1],training=True)
+        pad_mask = ~torch.eq(y[:,1:],self.padding_idx)  # [n, seq_len]
+        loss = cross_entropy(logits.reshape(-1, self.dec_v_emb),y[:,1:].reshape(-1))
+        loss.backward()
+        self.opt.step()
+        return loss.cpu().data.numpy(), logits
 
     def _pad_bool(self, seqs):
-        return tf.math.equal(seqs, self.padding_idx)
-
+        o = torch.eq(seqs,self.padding_idx) # [n, step]
+        return o
     def _pad_mask(self, seqs):
-        mask = tf.cast(self._pad_bool(seqs), tf.float32)
-        return mask[:, tf.newaxis, tf.newaxis, :]  # (n, 1, 1, step)
+        len_q = seqs.size(1)
+        mask = self._pad_bool(seqs).unsqueeze(1).expand(-1,len_q,-1)    # [n, len_q, step]
+        return mask.unsqueeze(1)    # [n, 1, len_q, step]
 
-    def _look_ahead_mask(self, seqs):
-        mask = 1 - tf.linalg.band_part(tf.ones((self.max_len, self.max_len)), -1, 0)
-        mask = tf.where(self._pad_bool(seqs)[:, tf.newaxis, tf.newaxis, :], 1, mask[tf.newaxis, tf.newaxis, :, :])
-        return mask  # (step, step)
+    def _look_ahead_mask(self,seqs):
+        device = next(self.parameters()).device
+        batch_size, seq_len = seqs.shape
+        mask = torch.triu(torch.ones((seq_len,seq_len), dtype=torch.long), diagonal=1).to(device)  # [seq_len ,seq_len]
+        mask = torch.where(self._pad_bool(seqs)[:,None,None,:],1,mask[None,None,:,:]).to(device)   # [n, 1, seq_len, seq_len]
+        return mask>0   # [n, 1, seq_len, seq_len]
 
     def translate(self, src, v2i, i2v):
-        src_pad = utils.pad_zero(src, self.max_len)
-        tgt = utils.pad_zero(np.array([[v2i["<GO>"], ] for _ in range(len(src))]), self.max_len+1)
-        tgti = 0
+        self.eval()
+        device = next(self.parameters()).device
+        src_pad = src
+        # Initialize Decoder input by constructing a matrix M([n, self.max_len+1]) with initial value:
+        # M[n,0] = start token id
+        # M[n,:] = 0
+        target = torch.from_numpy(utils.pad_zero(np.array([[v2i["<GO>"], ] for _ in range(len(src))]), self.max_len+1)).to(device)
         x_embed = self.embed(src_pad)
-        encoded_z = self.encoder.call(x_embed, False, mask=self._pad_mask(src_pad))
-        while True:
-            y = tgt[:, :-1]
+        encoded_z = self.encoder(x_embed,False,mask=self._pad_mask(src_pad))
+        for i in range(0,self.max_len):
+            y = target[:,:-1]
             y_embed = self.embed(y)
-            decoded_z = self.decoder.call(
-                y_embed, encoded_z, False, yz_look_ahead_mask=self._look_ahead_mask(y), xz_pad_mask=self._pad_mask(src_pad))
-            logits = self.o(decoded_z)[:, tgti, :].numpy()
-            idx = np.argmax(logits, axis=1)
-            tgti += 1
-            tgt[:, tgti] = idx
-            if tgti >= self.max_len:
-                break
-        return ["".join([i2v[i] for i in tgt[j, 1:tgti]]) for j in range(len(src))]
-
-    @property
-    def attentions(self):
-        attentions = {
-            "encoder": [l.mh.attention.numpy() for l in self.encoder.ls],
-            "decoder": {
-                "mh1": [l.mh[0].attention.numpy() for l in self.decoder.ls],
-                "mh2": [l.mh[1].attention.numpy() for l in self.decoder.ls],
-        }}
-        return attentions
+            decoded_z = self.decoder(y_embed,encoded_z,False,self._look_ahead_mask(y),self._pad_mask(src_pad))
+            o = self.o(decoded_z)[:,i,:]
+            idx = o.argmax(dim = 1).detach()
+            # Update the Decoder input, to predict for the next position.
+            target[:,i+1] = idx
+        self.train()
+        return target
 
 
-def train(model, data, step):
-    # training
-    t0 = time.time()
-    for t in range(step):
-        bx, by, seq_len = data.sample(64)
-        bx, by = utils.pad_zero(bx, max_len=MAX_LEN), utils.pad_zero(by, max_len=MAX_LEN + 1)
-        loss, logits = model.step(bx, by)
-        if t % 50 == 0:
-            logits = logits[0].numpy()
-            t1 = time.time()
-            print(
-                "step: ", t,
-                "| time: %.2f" % (t1 - t0),
-                "| loss: %.4f" % loss.numpy(),
-                "| target: ", "".join([data.i2v[i] for i in by[0, 1:10]]),
-                "| inference: ", "".join([data.i2v[i] for i in np.argmax(logits, axis=1)[:10]]),
-            )
-            t0 = t1
-
-    os.makedirs("./visual/models/transformer", exist_ok=True)
-    model.save_weights("./visual/models/transformer/model.ckpt")
-    os.makedirs("./visual/tmp", exist_ok=True)
-    with open("./visual/tmp/transformer_v2i_i2v.pkl", "wb") as f:
-        pickle.dump({"v2i": data.v2i, "i2v": data.i2v}, f)
 
 
-def export_attention(model, data, name="transformer"):
-    with open("./visual/tmp/transformer_v2i_i2v.pkl", "rb") as f:
-        dic = pickle.load(f)
-    model.load_weights("./visual/models/transformer/model.ckpt")
-    bx, by, seq_len = data.sample(32)
-    model.translate(bx, dic["v2i"], dic["i2v"])
-    attn_data = {
-        "src": [[data.i2v[i] for i in bx[j]] for j in range(len(bx))],
-        "tgt": [[data.i2v[i] for i in by[j]] for j in range(len(by))],
-        "attentions": model.attentions}
-    path = "./visual/tmp/%s_attention_matrix.pkl" % name
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "wb") as f:
-        pickle.dump(attn_data, f)
+def train(emb_dim=32,n_layer=3,n_head=4):
 
+    dataset = utils.DateData(4000)
+    print("Chinese time order: yy/mm/dd ",dataset.date_cn[:3],"\nEnglish time order: dd/M/yyyy", dataset.date_en[:3])
+    print("Vocabularies: ", dataset.vocab)
+    print(f"x index sample:  \n{dataset.idx2str(dataset.x[0])}\n{dataset.x[0]}",
+    f"\ny index sample:  \n{dataset.idx2str(dataset.y[0])}\n{dataset.y[0]}")
+    loader = DataLoader(dataset,batch_size=32,shuffle=True)
+    model = Transformer(n_vocab=dataset.num_word, max_len=MAX_LEN, n_layer = n_layer, emb_dim=emb_dim, n_head = n_head, drop_rate=0.1, padding_idx=0)
+    if torch.cuda.is_available():
+        print("GPU train avaliable")
+        device =torch.device("cuda")
+        model = model.cuda()
+    else:
+        device = torch.device("cpu")
+        model = model.cpu()
+    for i in range(40):
+        for batch_idx , batch in enumerate(loader):
+            bx, by, decoder_len = batch
+            bx, by = torch.from_numpy(utils.pad_zero(bx,max_len = MAX_LEN)).type(torch.LongTensor).to(device), \
+                torch.from_numpy(utils.pad_zero(by,MAX_LEN+1)).type(torch.LongTensor).to(device)
+            loss, logits = model.step(bx,by)
+            if batch_idx%50 == 0:
+                target = dataset.idx2str(by[0, 1:-1].cpu().data.numpy())
+                pred = model.translate(bx[0:1],dataset.v2i,dataset.i2v)
+                res = dataset.idx2str(pred[0].cpu().data.numpy())
+                src = dataset.idx2str(bx[0].cpu().data.numpy())
+                print("Epoch: ",i, "| t: ", batch_idx, "| loss: %.3f" % loss, "| input: ", src, "| target: ", target, "| inference: ", res,)
+    model_path = 'weight/transformer.pth'
+    if 0:
+        model.load_state_dict(torch.load(model_path, map_location='cpu'))
+    else:
+        torch.save(model.state_dict(), model_path, _use_new_zipfile_serialization=False)
 
 if __name__ == "__main__":
-    utils.set_soft_gpu(True)
-    d = utils.DateData(4000)
-    print("Chinese time order: yy/mm/dd ", d.date_cn[:3], "\nEnglish time order: dd/M/yyyy ", d.date_en[:3])
-    print("vocabularies: ", d.vocab)
-    print("x index sample: \n{}\n{}".format(d.idx2str(d.x[0]), d.x[0]),
-          "\ny index sample: \n{}\n{}".format(d.idx2str(d.y[0]), d.y[0]))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--emb_dim",type=int, help="change the model dimension")
+    parser.add_argument("--n_layer",type=int, help="change the number of layers in Encoder and Decoder")
+    parser.add_argument("--n_head",type=int, help="change the number of heads in MultiHeadAttention")
 
-    m = Transformer(MODEL_DIM, MAX_LEN, N_LAYER, N_HEAD, d.num_word, DROP_RATE)
-    train(m, d, step=800)
-    export_attention(m, d)
+    args = parser.parse_args()
+    args = dict(filter(lambda x: x[1],vars(args).items()))
+    train(**args)

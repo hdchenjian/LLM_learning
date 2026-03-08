@@ -5,6 +5,8 @@ import utils
 from torch.utils.data import DataLoader
 from torch.nn.functional import cross_entropy,softmax
 
+np.set_printoptions(precision=4, suppress=True)
+
 class Seq2Seq(nn.Module):
     def __init__(self,enc_v_dim, dec_v_dim, emb_dim, units, max_pred_len, start_token, end_token):
         super().__init__()
@@ -45,9 +47,17 @@ class Seq2Seq(nn.Module):
         dec_emb_in = dec_emb_in.permute(1,0,2)  # [1, n, emb_dim]
         dec_in = dec_emb_in[0]                  # [n, emb_dim]
         output = []
+        attention_hotmap = None
         for i in range(self.max_pred_len):
             attn_prod = torch.matmul(self.attn(hx.unsqueeze(1)),encode_out.permute(0,2,1)) # [n, 1, step]
             att_weight = softmax(attn_prod, dim=2)  # [n, 1, step]
+            #import pdb; pdb.set_trace()
+            if return_align:
+                if attention_hotmap is None:
+                    attention_hotmap = att_weight
+                elif i < self.max_pred_len - 1:
+                    attention_hotmap = torch.cat([attention_hotmap, att_weight], dim=1)
+                print('attention_hotmap', attention_hotmap.shape, att_weight[0][0].detach().numpy())
             context = torch.matmul(att_weight,encode_out)    # [n, 1, units]
             # attn_prod = torch.matmul(self.attn(o),hx.unsqueeze(2))  # [n, step, 1]
             # attn_weight = softmax(attn_prod,dim=1)                  # [n, step, 1]
@@ -59,9 +69,14 @@ class Seq2Seq(nn.Module):
             result = result.argmax(dim=1).view(-1,1)
             dec_in=self.dec_embeddings(result).permute(1,0,2)[0]
             output.append(result)
+            if i == 3:
+                print('month', result, att_weight.detach().numpy())
         output = torch.stack(output,dim=0)
         self.train()
 
+        if return_align:
+            #print('output.permute(1,0,2).view(-1,self.max_pred_len)', output.permute(1,0,2).view(-1,self.max_pred_len))
+            return attention_hotmap.cpu().detach()
         return output.permute(1,0,2).view(-1,self.max_pred_len)
 
     def train_logit(self,x,y):
@@ -111,7 +126,8 @@ def train():
     f"\ny index sample:  \n{dataset.idx2str(dataset.y[0])}\n{dataset.y[0]}")
     loader = DataLoader(dataset,batch_size=32,shuffle=True)
     model = Seq2Seq(dataset.num_word,dataset.num_word,emb_dim=16,units=32,max_pred_len=11,start_token=dataset.start_token,end_token=dataset.end_token)
-    for i in range(100):
+    for i in range(70):
+        break
         for batch_idx , batch in enumerate(loader):
             bx, by, decoder_len = batch
             loss = model.step(bx,by)
@@ -121,10 +137,19 @@ def train():
                 res = dataset.idx2str(pred[0].data.numpy())
                 src = dataset.idx2str(bx[0].data.numpy())
                 print("Epoch: ",i, "| t: ", batch_idx, "| loss: %.3f" % loss, "| input: ", src, "| target: ", target, "| inference: ", res,)
-    # pkl_data = {"i2v": dataset.i2v, "x": dataset.x[:6], "y": dataset.y[:6], "align": model.inference(dataset.x[:6], return_align=True)}
 
-    # with open("./visual/tmp/attention_align.pkl", "wb") as f:
-    #     pickle.dump(pkl_data, f)
+    #return
+    model_path = 'weight/seq2seq_attention.pth'
+    if 1:
+        model.load_state_dict(torch.load(model_path, map_location='cpu'))
+    else:
+        torch.save(model.state_dict(), model_path, _use_new_zipfile_serialization=False)
+    print('dataset.x[:6]', type(dataset.x[:6]), dataset.x[:6].dtype)
+    input_data = torch.from_numpy(dataset.x[:6])#.type(torch.float32)
+    pkl_data = {"i2v": dataset.i2v, "x": dataset.x[:6], "y": dataset.y[:6], "align": model.inference(input_data, return_align=True)}
+    import pickle
+    with open("visual/tmp/attention_align.pkl", "wb") as f:
+        pickle.dump(pkl_data, f)
 
 if __name__ == "__main__":
     train()
