@@ -245,6 +245,7 @@ def train(emb_dim=32,n_layer=3,n_head=4):
         device = torch.device("cpu")
         model = model.cpu()
     for i in range(40):
+        break
         for batch_idx , batch in enumerate(loader):
             bx, by, decoder_len = batch
             bx, by = torch.from_numpy(utils.pad_zero(bx,max_len = MAX_LEN)).type(torch.LongTensor).to(device), \
@@ -257,10 +258,21 @@ def train(emb_dim=32,n_layer=3,n_head=4):
                 src = dataset.idx2str(bx[0].cpu().data.numpy())
                 print("Epoch: ",i, "| t: ", batch_idx, "| loss: %.3f" % loss, "| input: ", src, "| target: ", target, "| inference: ", res,)
     model_path = 'weight/transformer.pth'
-    if 0:
+    if 1:
         model.load_state_dict(torch.load(model_path, map_location='cpu'))
     else:
         torch.save(model.state_dict(), model_path, _use_new_zipfile_serialization=False)
+
+    for batch_idx , batch in enumerate(loader):
+        bx, by, decoder_len = batch
+        bx, by = torch.from_numpy(utils.pad_zero(bx,max_len = MAX_LEN)).type(torch.LongTensor).to(device), \
+            torch.from_numpy(utils.pad_zero(by,MAX_LEN+1)).type(torch.LongTensor).to(device)
+        target = dataset.idx2str(by[0, 1:-1].cpu().data.numpy())
+        pred = model.translate(bx[0:1],dataset.v2i,dataset.i2v)
+        res = dataset.idx2str(pred[0].cpu().data.numpy())
+        src = dataset.idx2str(bx[0].cpu().data.numpy())
+        print("input: ", src, "| target: ", target, "| inference: ", res,)
+        break
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
