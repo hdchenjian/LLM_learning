@@ -1,6 +1,6 @@
 ### 深度学习笔记
 
-#### 手搓一个LLaMA2 大模型，支持旋转位置编码、稠密模型及混合专家模型（Mixture of Experts, MoE）
+#### 手搓一个大模型，支持旋转位置编码、稠密模型及混合专家模型（Mixture of Experts, MoE）
 - [LLaMA2](./train/llama2.c/)
 
 #### 基于transformer 的文本翻译，支持英-中、英-法 语言翻译实现
