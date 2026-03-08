@@ -1,7 +1,5 @@
 import math, os
-import inspect
-from dataclasses import dataclass
-from typing import Any, Optional, Tuple
+from typing import Optional
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -92,12 +90,7 @@ def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor):
     # 将freqs_cis调整为新的形状，并返回
     return freqs_cis.view(shape)
 
-def apply_rotary_emb(
-    xq: torch.Tensor,
-    xk: torch.Tensor,
-    freqs_cos: torch.Tensor,
-    freqs_sin: torch.Tensor
-) -> Tuple[torch.Tensor, torch.Tensor]:
+def apply_rotary_emb(xq: torch.Tensor, xk: torch.Tensor, freqs_cos: torch.Tensor, freqs_sin: torch.Tensor):
 
     # 将查询和键张量转换为浮点数，并重塑形状以分离实部和虚部
     xq_r, xq_i = xq.float().reshape(xq.shape[:-1] + (-1, 2)).unbind(-1)
