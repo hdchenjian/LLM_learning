@@ -241,8 +241,8 @@ if __name__ == "__main__":
     parser.add_argument("--log_interval", type=int, default=100, help="日志记录间隔")
     parser.add_argument("--save_interval", type=int, default=1000, help="模型保存间隔")
     
-    # 多GPU训练参数
-    parser.add_argument("--gpus", type=str, default='0,1,2,3,4,5,6,7', help="使用的GPU ID，用逗号分隔 (例如: '0,1,2')")
+    # 多GPU训练参数 '0,1,2,3,4,5,6,7'
+    parser.add_argument("--gpus", type=str, default=None, help="使用的GPU ID，用逗号分隔 (例如: '0,1,2')")
 
     args = parser.parse_args()
 
