@@ -23,5 +23,18 @@ def train():
     num_params = sum(p.numel() for p in model.parameters())
     print(f'LLM总参数量：{num_params / 1e6:.3f} 百万')
 
+    for i in range(40):
+        for batch_idx , batch in enumerate(loader):
+            bx, by, decoder_len = batch
+            bx, by = torch.from_numpy(utils.pad_zero(bx,max_len = MAX_LEN)).type(torch.LongTensor).to(device), \
+                torch.from_numpy(utils.pad_zero(by,MAX_LEN+1)).type(torch.LongTensor).to(device)
+            loss, logits = model.step(bx, by)
+            if batch_idx%50 < 0:
+                target = dataset.idx2str(by[0, 1:-1].cpu().data.numpy())
+                pred = model.translate(bx[0:1],dataset.v2i,dataset.i2v)
+                res = dataset.idx2str(pred[0].cpu().data.numpy())
+                src = dataset.idx2str(bx[0].cpu().data.numpy())
+                print("Epoch: ",i, "| t: ", batch_idx, "| loss: %.3f" % loss, "| input: ", src, "| target: ", target, "| inference: ", res,)
+
 if __name__ == '__main__':
     train()
