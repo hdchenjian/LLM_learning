@@ -85,8 +85,9 @@ def train_epoch(epoch):
     # 遍历数据加载器中的每个batch
     print('dataset sample count:', len(train_loader.dataset), 'batch_size', train_loader.batch_size)
     for step, (X, Y, loss_mask) in enumerate(train_loader):
-        #import pdb; pdb.set_trace()
         #print('X', X.shape, train_loader.dataset.tokenizer.decode(X))
+        #print('Y', Y.shape, train_loader.dataset.tokenizer.decode(Y))
+        #import pdb; pdb.set_trace()
         # 将数据转移到指定设备（GPU/CPU）
         X = X.to(args.device)  # 输入序列
         Y = Y.to(args.device)  # 目标序列
