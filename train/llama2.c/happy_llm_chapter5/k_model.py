@@ -394,6 +394,7 @@ class Transformer(PreTrainedModel):
         if targets is not None:
             # 如果给定了目标，计算损失
             logits = self.output(h)
+            #import pdb; pdb.set_trace()
             self.last_loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=0, reduction='none')
         else:
             # 推理时的小优化：只对最后一个位置的输出进行前向传播

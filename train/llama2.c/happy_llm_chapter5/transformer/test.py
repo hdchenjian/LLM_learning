@@ -25,31 +25,22 @@ def train():
     model = model.to(device)
     num_params = sum(p.numel() for p in model.parameters())
     print(f'LLM总参数量：{num_params / 1e6:.3f} 百万')
+    model.load_state_dict(torch.load('w.pth', map_location='cpu'))
 
-    model.train()
+    model.eval()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.002)
     for i in range(40):
         for batch_idx , batch in enumerate(loader):
             bx, by, decoder_len = batch
             bx, by = torch.from_numpy(utils.pad_zero(bx, max_len = MAX_LEN)).type(torch.LongTensor).to(device), \
                 torch.from_numpy(utils.pad_zero(by, MAX_LEN+1)).type(torch.LongTensor).to(device)
-            loss_mask = ~torch.eq(by[:, 1:], dataset.v2i["<PAD>"])
-            #print('input', bx[0].numpy(), '->', by[0].numpy())
-            #print('input', dataset.idx2str(bx[0].numpy(), eos_truncate=False), '->', dataset.idx2str(by[0].numpy(), eos_truncate=False))
-            #import pdb; pdb.set_trace()
-
-            # 清零梯度，set_to_none=True可以节省内存
-            optimizer.zero_grad(set_to_none=True)
-            out = model(bx, by[:, :-1].contiguous())
-            # 将loss_mask展平为一维
-            loss_mask = loss_mask.view(-1)
-            # 应用掩码计算有效损失（忽略padding位置）
-            loss = torch.sum(out.last_loss * loss_mask) / loss_mask.sum()
-            loss.backward()
-            optimizer.step()
+            target = dataset.idx2str(by[0, 1:-1].cpu().data.numpy())
+            pred = model.translate(bx[0:1],dataset.v2i,dataset.i2v)
+            res = dataset.idx2str(pred[0].cpu().data.numpy())
+            src = dataset.idx2str(bx[0].cpu().data.numpy())
+            print("Epoch: ",i, "| t: ", batch_idx, "| loss: %.3f" % loss, "| input: ", src, "| target: ", target, "| inference: ", res,)
+            return
         print("Epoch: ", i, "| loss: %.4f" % loss)
-    #model.load_state_dict(torch.load(model_path, map_location='cpu'))
-    torch.save(model.state_dict(), 'w.pth', _use_new_zipfile_serialization=False)
 
 if __name__ == '__main__':
-    train()
+    test()

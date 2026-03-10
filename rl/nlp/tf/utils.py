@@ -42,11 +42,11 @@ class DateData:
         decoder_len = np.full((len(bx),), by.shape[1] - 1, dtype=np.int32)
         return bx, by, decoder_len
 
-    def idx2str(self, idx):
+    def idx2str(self, idx, eos_truncate=True):
         x = []
         for i in idx:
             x.append(self.i2v[i])
-            if i == self.end_token:
+            if i == self.end_token and eos_truncate:
                 break
         return "".join(x)
 
