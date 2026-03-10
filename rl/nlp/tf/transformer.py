@@ -245,11 +245,13 @@ def train(emb_dim=32,n_layer=3,n_head=4):
         device = torch.device("cpu")
         model = model.cpu()
     for i in range(40):
-        break
         for batch_idx , batch in enumerate(loader):
             bx, by, decoder_len = batch
             bx, by = torch.from_numpy(utils.pad_zero(bx,max_len = MAX_LEN)).type(torch.LongTensor).to(device), \
                 torch.from_numpy(utils.pad_zero(by,MAX_LEN+1)).type(torch.LongTensor).to(device)
+
+            #print('input', bx[0].numpy(), '->', by[0].numpy())
+            #print('input', dataset.idx2str(bx[0].numpy(), eos_truncate=False), '->', dataset.idx2str(by[0][:-1].numpy(), eos_truncate=False))
             loss, logits = model.step(bx,by)
             if batch_idx%50 == 0:
                 target = dataset.idx2str(by[0, 1:-1].cpu().data.numpy())
