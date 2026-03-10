@@ -10,8 +10,10 @@ PAD_ID = 0
 
 
 class DateData:
-    def __init__(self, n):
+    def __init__(self, n, llm=False):
         np.random.seed(1)
+        self.llm = llm
+        self.max_len = 1 + 8 +    1 + 9 + 1
         self.date_cn = []
         self.date_en = []
         for timestamp in np.random.randint(143835585, 2043835585, n):
@@ -58,10 +60,15 @@ class DateData:
         return len(self.x)
 
     def __getitem__(self, index):
+        if self.llm:
+            #import pdb; pdb.set_trace()
+            input_id = np.concatenate((np.array([self.v2i["<GO>"]]), self.x[index], self.y[index]))
+            #print('input_id', input_id)
+            return input_id, input_id[1:], 0
         return self.x[index],self.y[index], len(self.y[index])-1
 
 def pad_zero(seqs, max_len):
-    padded = np.full((len(seqs), max_len), fill_value=PAD_ID, dtype=np.long)
+    padded = np.full((len(seqs), max_len), fill_value=PAD_ID, dtype=np.int32)
     for i, seq in enumerate(seqs):
         padded[i, :len(seq)] = seq
     return padded
