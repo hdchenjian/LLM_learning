@@ -28,7 +28,7 @@ def train():
 
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.00002)
-    for i in range(40):
+    for i in range(200):
         for batch_idx , batch in enumerate(loader):
             bx, by, decoder_len = batch
             bx = torch.from_numpy(utils.pad_zero(bx, max_len = MAX_LEN)).type(torch.LongTensor).to(device)
