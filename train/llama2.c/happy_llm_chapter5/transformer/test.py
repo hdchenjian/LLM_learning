@@ -55,7 +55,7 @@ def test():
     loader = DataLoader(dataset, batch_size=1, shuffle=True)
 
     MAX_LEN = dataset.max_len
-    config = ModelConfig(dim=32, n_layers=3, n_heads=4, multiple_of=16, n_kv_heads=2, vocab_size=len(dataset.vocab), max_seq_len=MAX_LEN)
+    config = ModelConfig(dim=64, n_layers=3, n_heads=4, multiple_of=4, n_kv_heads=4, vocab_size=len(dataset.vocab), max_seq_len=MAX_LEN)
     #import pdb; pdb.set_trace()
     model = Transformer(config)
     device = 'cpu'
