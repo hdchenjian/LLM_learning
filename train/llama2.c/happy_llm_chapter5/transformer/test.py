@@ -22,7 +22,7 @@ def generate(model, idx, tokenizer, stop_id=None, max_new_tokens=256, temperatur
         
         # 前向传播获取序列中最后一个位置的 logits
         #import pdb; pdb.set_trace()
-        print(f'\n{count}/{max_new_tokens} input: ', tokenizer.idx2str(idx_cond[0].cpu().numpy()))
+        #print(f'\n{count}/{max_new_tokens} input: ', tokenizer.idx2str(idx_cond[0].cpu().numpy()))
         count += 1
         logits = model(idx_cond).logits
         logits = logits[:, -1, :] # 只保留最后一个时间步的输出
@@ -39,10 +39,9 @@ def generate(model, idx, tokenizer, stop_id=None, max_new_tokens=256, temperatur
             probs = F.softmax(logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
 
-        print('idx_next', idx_next)
+        idx = torch.cat((idx, idx_next), dim=1)
         if idx_next == stop_id:
             break
-        idx = torch.cat((idx, idx_next), dim=1)
     return idx[:, index:] # 只返回生成的token
 
 def test():
@@ -52,7 +51,7 @@ def test():
         print(i, dataset.i2v[i], end=', ')
     print(f"\nx index sample:  \n{dataset.idx2str(dataset.x[0])}\n{dataset.x[0]}", 
           f"\ny index sample:  \n{dataset.idx2str(dataset.y[0])}\n{dataset.y[0]}\n")
-    loader = DataLoader(dataset, batch_size=1, shuffle=True)
+    loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
     MAX_LEN = dataset.max_len
     config = ModelConfig(dim=64, n_layers=3, n_heads=4, multiple_of=4, n_kv_heads=4, vocab_size=len(dataset.vocab), max_seq_len=MAX_LEN)
@@ -66,19 +65,19 @@ def test():
 
     model.eval()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.002)
-    for i in range(40):
-        for batch_idx , batch in enumerate(loader):
-            bx, by, decoder_len = batch
-            bx = torch.from_numpy(utils.pad_zero(bx, max_len = MAX_LEN)).type(torch.LongTensor).to(device)
-            target = dataset.idx2str(bx[0, 9:].cpu().data.numpy())
-            input_id = bx[0:1][:, 0:9]
-            #import pdb; pdb.set_trace()
-            pred = generate(model, input_id, dataset, stop_id=dataset.v2i["<EOS>"], max_new_tokens=MAX_LEN, temperature=1.0)
-            res = dataset.idx2str(pred[0].cpu().data.numpy())
-            src = dataset.idx2str(bx[0].cpu().data.numpy())
-            print('input', input_id, dataset.idx2str(input_id[0].numpy(), eos_truncate=False))
-            print("input: ", src, "| target: ", target, "| inference: ", res,)
-            return
+    for batch_idx , batch in enumerate(loader):
+        bx, by, decoder_len = batch
+        bx = torch.from_numpy(utils.pad_zero(bx, max_len = MAX_LEN)).type(torch.LongTensor).to(device)
+        target = dataset.idx2str(bx[0, 9:].cpu().data.numpy())
+        input_id = bx[0:1][:, 0:9]
+        #import pdb; pdb.set_trace()
+        pred = generate(model, input_id, dataset, stop_id=dataset.v2i["<EOS>"], max_new_tokens=MAX_LEN, temperature=1.0)
+        res = dataset.idx2str(pred[0].cpu().data.numpy())
+        src = dataset.idx2str(bx[0].cpu().data.numpy())
+        #print('input', input_id, dataset.idx2str(input_id[0].numpy(), eos_truncate=False))
+        print(batch_idx, "input: ", src, "| target: ", target, "| inference: ", res, "| right: ", int(target == res))
+        if batch_idx > 30: break
+        #return
 
 if __name__ == '__main__':
     test()
