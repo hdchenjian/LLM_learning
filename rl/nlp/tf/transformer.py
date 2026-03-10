@@ -260,7 +260,7 @@ def train(emb_dim=32,n_layer=3,n_head=4):
                 src = dataset.idx2str(bx[0].cpu().data.numpy())
                 print("Epoch: ",i, "| t: ", batch_idx, "| loss: %.3f" % loss, "| input: ", src, "| target: ", target, "| inference: ", res,)
     model_path = 'weight/transformer.pth'
-    if 1:
+    if 0:
         model.load_state_dict(torch.load(model_path, map_location='cpu'))
     else:
         torch.save(model.state_dict(), model_path, _use_new_zipfile_serialization=False)
