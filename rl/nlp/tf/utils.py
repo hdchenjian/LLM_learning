@@ -125,7 +125,7 @@ def _process_mrpc(dir="./MRPC", rows=None):
     return data, v2i, i2v
 
 
-class MRPCData:
+class MRPCData(tDataset):
     num_seg = 3
     pad_id = PAD_ID
 
@@ -157,6 +157,9 @@ class MRPCData:
         self.word_ids = np.array(list(set(self.i2v.keys()).difference(
             [self.v2i[v] for v in ["<PAD>", "<MASK>", "<SEP>"]])))
 
+    def __getitem__(self,idx):
+        return self.x[idx], self.seg[idx], self.xlen[idx], self.nsp_y[idx]
+
     def sample(self, n):
         bi = np.random.randint(0, self.x.shape[0], size=n)
         bx, bs, bl, by = self.x[bi], self.seg[bi], self.xlen[bi], self.nsp_y[bi]
@@ -165,6 +168,9 @@ class MRPCData:
     @property
     def num_word(self):
         return len(self.v2i)
+
+    def __len__(self):
+        return len(self.x)
 
     @property
     def mask_id(self):
