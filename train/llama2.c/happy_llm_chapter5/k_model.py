@@ -1,5 +1,4 @@
 import math, os
-from typing import Optional
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -306,9 +305,6 @@ class DecoderLayer(nn.Module):
         return out
 
 class Transformer(PreTrainedModel):
-    config_class = ModelConfig  # 配置类
-    last_loss: Optional[torch.Tensor] # 记录最后一次计算的损失
-
     def __init__(self, args: ModelConfig = None):
         super().__init__(args)
         # 初始化模型参数
@@ -361,7 +357,7 @@ class Transformer(PreTrainedModel):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
     
-    def forward(self, tokens: torch.Tensor, targets: Optional[torch.Tensor] = None, **kwargs) -> torch.Tensor:
+    def forward(self, tokens: torch.Tensor, targets = None, **kwargs) -> torch.Tensor:
         """
         - tokens: Optional[torch.Tensor], 输入 token 张量。
         - targets: Optional[torch.Tensor], 目标 token 张量。

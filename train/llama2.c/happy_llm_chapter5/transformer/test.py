@@ -9,6 +9,9 @@ from k_model import ModelConfig, Transformer
 sys.path.insert(0, '../../../../rl/nlp/tf/')
 import utils
 
+import numpy as np
+np.set_printoptions(precision=4, suppress=True)
+
 def generate(model, idx, tokenizer, stop_id=None, max_new_tokens=256, temperature=1.0, top_k=None):
     """ 给定输入序列 idx（形状为 (bz,seq_len) 的长整型张量），通过多次生成新 token 来完成序列。
     在 model.eval() 模式下运行。效率较低的采样版本，没有使用键k/v cache。 """
@@ -76,7 +79,7 @@ def test():
         src = dataset.idx2str(bx[0].cpu().data.numpy())
         #print('input', input_id, dataset.idx2str(input_id[0].numpy(), eos_truncate=False))
         print(batch_idx, "input: ", src, "| target: ", target, "| inference: ", res, "| right: ", int(target == res))
-        if batch_idx > 30: break
+        if batch_idx >= 0: break
         #return
 
 if __name__ == '__main__':

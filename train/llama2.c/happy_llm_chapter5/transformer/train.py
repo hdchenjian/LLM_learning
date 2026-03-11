@@ -8,6 +8,9 @@ from k_model import ModelConfig, Transformer
 sys.path.insert(0, '../../../../rl/nlp/tf/')
 import utils
 
+import numpy as np
+np.set_printoptions(precision=4, suppress=True)
+
 def train():
     dataset = utils.DateData(4000, llm=True)
     print("Chinese time order: yy/mm/dd ", dataset.date_cn[:3], "\nEnglish time order: dd/M/yyyy", dataset.date_en[:3])
