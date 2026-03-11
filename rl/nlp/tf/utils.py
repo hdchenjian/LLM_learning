@@ -5,6 +5,7 @@ import requests
 import pandas as pd
 import re
 import itertools
+from torch.utils.data import Dataset as torchDataset
 
 PAD_ID = 0
 
@@ -170,11 +171,12 @@ class MRPCData:
         return self.v2i["<MASK>"]
 
 
-class MRPCSingle:
+class MRPCSingle(torchDataset):
     pad_id = PAD_ID
 
-    def __init__(self, data_dir="./MRPC/", rows=None, proxy=None):
+    def __init__(self,data_dir="./MRPC/",rows = None, proxy= None):
         maybe_download_mrpc(save_dir=data_dir, proxy=proxy)
+
         data, self.v2i, self.i2v = _process_mrpc(data_dir, rows)
 
         self.max_len = max([len(s) + 2 for s in data["train"]["s1id"] + data["train"]["s2id"]])
@@ -188,7 +190,6 @@ class MRPCSingle:
         ]
         self.x = pad_zero(x, max_len=self.max_len)
         self.word_ids = np.array(list(set(self.i2v.keys()).difference([self.v2i["<PAD>"]])))
-
     def sample(self, n):
         bi = np.random.randint(0, self.x.shape[0], size=n)
         bx = self.x[bi]
@@ -197,7 +198,13 @@ class MRPCSingle:
     @property
     def num_word(self):
         return len(self.v2i)
+    
+    def __getitem__(self, index):
+        return self.x[index]
 
+    
+    def __len__(self):
+        return len(self.x)
 
 class Dataset:
     def __init__(self, x, y, v2i, i2v):
