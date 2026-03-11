@@ -125,7 +125,7 @@ def _process_mrpc(dir="./MRPC", rows=None):
     return data, v2i, i2v
 
 
-class MRPCData(tDataset):
+class MRPCData(torchDataset):
     num_seg = 3
     pad_id = PAD_ID
 
