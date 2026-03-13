@@ -8,3 +8,4 @@ https://github.com/karpathy/llama2.c
 https://github.com/tairov/llama2.py
 
 https://github.com/KaihuaTang/Building-a-Small-LLM-from-Scratch/tree/main
+https://zhuanlan.zhihu.com/p/15865727118
