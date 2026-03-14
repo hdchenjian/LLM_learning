@@ -11,7 +11,7 @@ from utils import v_wrap, set_init, push_and_pull, record
 import torch.nn.functional as F
 import torch.multiprocessing as mp
 from shared_adam import SharedAdam
-import gym
+import gymnasium as gym
 import math, os
 os.environ["OMP_NUM_THREADS"] = "1"
 
@@ -20,7 +20,7 @@ GAMMA = 0.9
 MAX_EP = 3000
 MAX_EP_STEP = 200
 
-env = gym.make('Pendulum-v0')
+env = gym.make('Pendulum-v1')
 N_S = env.observation_space.shape[0]
 N_A = env.action_space.shape[0]
 
@@ -74,19 +74,19 @@ class Worker(mp.Process):
         self.g_ep, self.g_ep_r, self.res_queue = global_ep, global_ep_r, res_queue
         self.gnet, self.opt = gnet, opt
         self.lnet = Net(N_S, N_A)           # local network
-        self.env = gym.make('Pendulum-v0').unwrapped
+        self.env = gym.make('Pendulum-v1').unwrapped
 
     def run(self):
         total_step = 1
         while self.g_ep.value < MAX_EP:
-            s = self.env.reset()
+            s, info = self.env.reset()
             buffer_s, buffer_a, buffer_r = [], [], []
             ep_r = 0.
             for t in range(MAX_EP_STEP):
                 if self.name == 'w0':
                     self.env.render()
                 a = self.lnet.choose_action(v_wrap(s[None, :]))
-                s_, r, done, _ = self.env.step(a.clip(-2, 2))
+                s_, r, done, truncated, info = self.env.step(a.clip(-2, 2))
                 if t == MAX_EP_STEP - 1:
                     done = True
                 ep_r += r
@@ -115,7 +115,10 @@ if __name__ == "__main__":
     global_ep, global_ep_r, res_queue = mp.Value('i', 0), mp.Value('d', 0.), mp.Queue()
 
     # parallel training
-    workers = [Worker(gnet, opt, global_ep, global_ep_r, res_queue, i) for i in range(mp.cpu_count())]
+    worker_cout = 2
+    if mp.cpu_count() > 4:
+        worker_cout = 4 #mp.cpu_count()
+    workers = [Worker(gnet, opt, global_ep, global_ep_r, res_queue, i) for i in range(worker_cout)]
     [w.start() for w in workers]
     res = []                    # record episode reward to plot
     while True:
