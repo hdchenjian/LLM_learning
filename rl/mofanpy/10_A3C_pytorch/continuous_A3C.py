@@ -15,7 +15,7 @@ import gymnasium as gym
 import math, os
 os.environ["OMP_NUM_THREADS"] = "1"
 
-UPDATE_GLOBAL_ITER = 5
+UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.9
 MAX_EP = 3000
 MAX_EP_STEP = 200
@@ -38,17 +38,19 @@ class Net(nn.Module):
         set_init([self.a1, self.mu, self.sigma, self.c1, self.v])
         self.distribution = torch.distributions.Normal
 
-    def forward(self, x):
+    def forward(self, x, action_only=False):
         a1 = F.relu6(self.a1(x))
         mu = 2 * F.tanh(self.mu(a1))
         sigma = F.softplus(self.sigma(a1)) + 0.001      # avoid 0
+        if action_only:
+            return mu, sigma, None
         c1 = F.relu6(self.c1(x))
         values = self.v(c1)
         return mu, sigma, values
 
     def choose_action(self, s):
         self.training = False
-        mu, sigma, _ = self.forward(s)
+        mu, sigma, _ = self.forward(s, action_only=True)
         m = self.distribution(mu.view(1, ).data, sigma.view(1, ).data)
         return m.sample().numpy()
 
@@ -60,8 +62,8 @@ class Net(nn.Module):
 
         m = self.distribution(mu, sigma)
         log_prob = m.log_prob(a)
-        entropy = 0.5 + 0.5 * math.log(2 * math.pi) + torch.log(m.scale)  # exploration
-        exp_v = log_prob * td.detach() + 0.005 * entropy
+        entropy = 0.5 + 0.5 * math.log(2 * math.pi) + torch.log(m.scale)  #   encourage exploration
+        exp_v = log_prob * td.detach() + 0.01 * entropy
         a_loss = -exp_v
         total_loss = (a_loss + c_loss).mean()
         return total_loss
@@ -111,7 +113,7 @@ class Worker(mp.Process):
 if __name__ == "__main__":
     gnet = Net(N_S, N_A)        # global network
     gnet.share_memory()         # share the global parameters in multiprocessing
-    opt = SharedAdam(gnet.parameters(), lr=1e-4, betas=(0.95, 0.999))  # global optimizer
+    opt = SharedAdam(gnet.parameters(), lr=1e-3, betas=(0.95, 0.999))  # global optimizer
     global_ep, global_ep_r, res_queue = mp.Value('i', 0), mp.Value('d', 0.), mp.Queue()
 
     # parallel training
