@@ -40,10 +40,6 @@ class DiscreteToContinuousWrapper(gym.Wrapper):
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
 
-# -------------------------------------------------------------------------------
-# 3. TD3 的网络与训练逻辑示例 (PyTorch)
-# -------------------------------------------------------------------------------
-
 # 3.1 策略网络 (Actor): 输入状态，输出 4 维 logits
 #     Critic 网络: 输入状态和连续动作，输出 Q 值
 # （为简化，Actor、Critic 这里都用非常小的网络）
@@ -100,7 +96,6 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
-# 3.3 构建 TD3 算法核心
 class TD3Agent:
     def __init__(
         self,
@@ -273,10 +268,6 @@ def train_td3_on_discrete_maze_env(num_episodes=200, max_steps=100, batch_size=6
         print(f"Episode {episode}, Reward: {episode_reward}")
     return agent
 
-# -------------------------------------------------------------------------------
-# 5. 运行并测试
-# -------------------------------------------------------------------------------
-
 if __name__ == "__main__":
     agent = train_td3_on_discrete_maze_env()
 
@@ -288,7 +279,7 @@ if __name__ == "__main__":
         done = False
         total_reward = 0
         while not done:
-            test_env.render()       # 打印迷宫，可观察 Agent 的位置
+            #test_env.render()       # 打印迷宫，可观察 Agent 的位置
             action = agent.select_action(state)
             state, reward, done, _ = test_env.step(action)
             total_reward += reward
