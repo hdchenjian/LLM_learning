@@ -114,11 +114,11 @@ def apply_rotary_emb(xq: torch.Tensor, xk: torch.Tensor, freqs_cos: torch.Tensor
 def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
     # 获取输入张量的形状：批量大小、序列长度、键/值对头的数量、每个头的维度大小
     bs, slen, n_kv_heads, head_dim = x.shape
-    
+
     # 如果重复次数为1，则不需要重复，直接返回原始张量
     if n_rep == 1:
         return x
-    
+
     # 对张量进行扩展和重塑操作以重复键值对
     return (
         x[:, :, :, None, :]  # 在第四个维度（头的维度前）添加一个新的维度
@@ -237,7 +237,7 @@ class MLP(nn.Module):
         # 然后，进行逐元素乘输入x通过第三层线性变换的结果
         # 最后，通过第二层线性变换和dropout层
         return self.dropout(self.w2(F.silu(self.w1(x)) * self.w3(x)))
-    
+
 class MoE(nn.Module):
     def __init__(self, dim: int, hidden_dim: int, multiple_of: int, num_experts: int, top_k: int, dropout: float):
         super().__init__()
@@ -329,7 +329,7 @@ class Transformer(PreTrainedModel):
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
         # 将词嵌入层的权重与输出层的权重共享
-        self.tok_embeddings.weight = self.output.weight 
+        self.tok_embeddings.weight = self.output.weight
 
         # 预计算相对位置嵌入的频率
         freqs_cos, freqs_sin = precompute_freqs_cis(self.args.dim // self.args.n_heads, self.args.max_seq_len)
@@ -356,7 +356,7 @@ class Transformer(PreTrainedModel):
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-    
+
     def forward(self, tokens: torch.Tensor, targets = None, **kwargs) -> torch.Tensor:
         """
         - tokens: Optional[torch.Tensor], 输入 token 张量。
@@ -394,7 +394,7 @@ class Transformer(PreTrainedModel):
             self.last_loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=0, reduction='none')
         else:
             # 推理时的小优化：只对最后一个位置的输出进行前向传播
-            logits = self.output(h[:, [-1], :]) 
+            logits = self.output(h[:, [-1], :])
             self.last_loss = None
 
         # 设置输出
@@ -402,7 +402,7 @@ class Transformer(PreTrainedModel):
         self.OUT.__setitem__('last_loss', self.last_loss)
         return self.OUT
 
-    
+
     @torch.inference_mode()
     def generate(self, idx, tokenizer, stop_id=None, max_new_tokens=256, temperature=1.0, top_k=None):
         """
@@ -414,14 +414,14 @@ class Transformer(PreTrainedModel):
         for _ in range(max_new_tokens):
             # 如果序列上下文过长，截断它到最大长度
             idx_cond = idx if idx.size(1) <= self.args.max_seq_len else idx[:, -self.args.max_seq_len:]
-            
+
             # 前向传播获取序列中最后一个位置的 logits
             #import pdb; pdb.set_trace()
             print(f'\n{count}/{max_new_tokens} input: ', tokenizer.decode(idx_cond[0].cpu().numpy()).replace('\n', '# '))
             count += 1
             logits = self(idx_cond).logits
             logits = logits[:, -1, :] # 只保留最后一个时间步的输出
-            
+
             if temperature == 0.0:
                 # 选择最有可能的索引
                 _, idx_next = torch.topk(logits, k=1, dim=-1)
@@ -433,7 +433,7 @@ class Transformer(PreTrainedModel):
                     logits[logits < v[:, [-1]]] = -float('Inf')
                 probs = F.softmax(logits, dim=-1)
                 idx_next = torch.multinomial(probs, num_samples=1)
-            
+
 
             if idx_next == stop_id:
                 break
@@ -442,7 +442,7 @@ class Transformer(PreTrainedModel):
             idx = torch.cat((idx, idx_next), dim=1)
 
         return idx[:, index:] # 只返回生成的token
-    
+
     def _greedy_decode(self, logits: torch.Tensor) -> torch.Tensor:
         """
         贪婪解码：选择概率最大的token
