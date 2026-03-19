@@ -52,6 +52,9 @@ def train_epoch(epoch):
     """训练一个epoch"""
     start_time = time.time()
     for step, (X, Y, loss_mask) in enumerate(train_loader):
+        #print('X', X.shape, train_loader.dataset.tokenizer.decode(X))
+        #print('Y', Y.shape, train_loader.dataset.tokenizer.decode(Y))
+        #import pdb; pdb.set_trace()
         X = X.to(args.device)
         Y = Y.to(args.device)
         loss_mask = loss_mask.to(args.device)
