@@ -373,6 +373,5 @@ def test_ppo(model_path="ppo_actor_critic_fixed.pth", num_episodes=3):
 if __name__ == "__main__":
     # 1. 训练
     rewards = train_ppo(num_episodes=600, max_steps_per_episode=100)
-
     # 2. 测试
     test_ppo("ppo_actor_critic_fixed.pth", num_episodes=3)
