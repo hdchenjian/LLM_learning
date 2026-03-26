@@ -104,3 +104,4 @@ class SFTDataset(Dataset):
         Y = np.array(input_id[1:]).astype(np.int64)
         loss_mask = np.array(loss_mask[1:]).astype(np.int64)
         return torch.from_numpy(X), torch.from_numpy(Y), torch.from_numpy(loss_mask)
+
