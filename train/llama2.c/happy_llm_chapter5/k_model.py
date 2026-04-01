@@ -677,7 +677,6 @@ if __name__ == '__main__':
         dim=1024,
         n_layers=18,
     )
-    # 实例化LLaMA2Model
     #os.environ["MOE_BLOCK"] = '1'
     model = Transformer(args=args)
     # 计算model的全部参数
