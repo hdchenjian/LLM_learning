@@ -34,3 +34,4 @@ while True:
     print(f"Assistant: {response}")
     #messages.append({"role": "assistant", "content": response})
     break
+
