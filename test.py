@@ -20,7 +20,6 @@ y.backward(torch.tensor([0.1, 0.2, 0.3], dtype=torch.float))
 
 print(x1.grad, x2.grad, x3.grad)
 #tensor(1.1000) tensor(1.4000) tensor(1.)
-
 exit()
 
 x
